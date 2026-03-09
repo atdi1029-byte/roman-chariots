@@ -4,8 +4,8 @@
   "description": "Smart Budgeting & Spending Tracker",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f5ece0",
-  "theme_color": "#f5ece0",
+  "background_color": "#faf5ee",
+  "theme_color": "#faf5ee",
   "orientation": "portrait",
   "icons": [
     {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#f5ece0">
+<meta name="theme-color" content="#faf5ee">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Chariots">
@@ -19,39 +19,43 @@ body{
   font-family:'Inter',sans-serif;
   min-height:100vh;min-height:100dvh;
   overflow-x:hidden;
-  background:#f5ece0;
-  color:#3a2e20;
+  background:#faf5ee;
+  color:#3a3028;
 }
 input,button,textarea,select{font-family:inherit;font-size:inherit;border:none;outline:none;background:none}
 button{cursor:pointer}
 a{text-decoration:none;color:inherit}
 
-/* ===== CSS VARIABLES ===== */
+/* ===== CSS VARIABLES — Admont Abbey Palette ===== */
 :root{
-  --bg:#f5ece0;
-  --bg-warm:#efe4d4;
-  --card:rgba(255,255,255,0.88);
-  --card-border:rgba(180,150,100,0.15);
-  --card-shadow:0 2px 12px rgba(120,90,50,0.08);
-  --input-bg:rgba(255,255,255,0.92);
-  --text:#3a2e20;
-  --text-dim:#8a7a64;
-  --text-bright:#1a1208;
-  --gold:#c8a24e;
-  --gold-soft:rgba(200,162,78,0.15);
-  --gold-glow:rgba(200,162,78,0.25);
+  --bg:#faf5ee;
+  --bg-warm:#f0e8da;
+  --card:rgba(255,253,248,0.92);
+  --card-border:rgba(180,160,120,0.14);
+  --card-shadow:0 2px 14px rgba(100,80,50,0.07);
+  --input-bg:rgba(255,255,252,0.95);
+  --text:#3a3028;
+  --text-dim:#8a7e6a;
+  --text-bright:#1a1610;
+  --gold:#d0a840;
+  --gold-soft:rgba(208,168,64,0.14);
+  --gold-glow:rgba(208,168,64,0.25);
+  --sky:#52b4c8;
+  --sky-soft:rgba(82,180,200,0.12);
+  --sky-deep:#3a98b0;
+  --teal:#4a8a7a;
+  --teal-soft:rgba(74,138,122,0.12);
+  --rose:#c89090;
+  --rose-soft:rgba(200,144,144,0.10);
   --terracotta:#c47040;
-  --terracotta-soft:rgba(196,112,64,0.12);
-  --green:#4a8a52;
-  --green-soft:rgba(74,138,82,0.12);
-  --red:#b84a3a;
-  --red-soft:rgba(184,74,58,0.10);
+  --terracotta-soft:rgba(196,112,64,0.10);
+  --marble:#e8ddd0;
   --radius:14px;
   --radius-sm:8px;
-  --nav-bg:rgba(245,236,224,0.95);
-  --nav-border:rgba(180,150,100,0.12);
-  --modal-bg:rgba(245,236,224,0.97);
-  --toast-bg:rgba(255,255,255,0.95);
+  --nav-bg:rgba(250,245,238,0.96);
+  --nav-border:rgba(180,160,120,0.10);
+  --modal-bg:rgba(250,245,238,0.97);
+  --toast-bg:rgba(255,253,248,0.96);
 }
 
 /* ===== LAYOUT ===== */
@@ -71,7 +75,7 @@ a{text-decoration:none;color:inherit}
   font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;
   color:var(--text-bright);letter-spacing:-0.5px;
 }
-.app-title span{color:var(--gold)}
+.app-title span{color:var(--sky)}
 .header-month{
   font-size:.78rem;color:var(--text-dim);margin-top:2px;
 }
@@ -80,11 +84,11 @@ a{text-decoration:none;color:inherit}
 }
 .month-btn{
   width:30px;height:30px;border-radius:50%;
-  background:var(--gold-soft);color:var(--gold);
+  background:var(--sky-soft);color:var(--sky);
   display:flex;align-items:center;justify-content:center;
   font-size:.85rem;font-weight:700;
 }
-.month-btn:active{background:var(--gold-glow)}
+.month-btn:active{background:rgba(82,180,200,0.25)}
 
 /* ===== SUMMARY CARDS ===== */
 .summary{
@@ -134,7 +138,7 @@ a{text-decoration:none;color:inherit}
   padding:6px 4px;border-radius:6px;color:var(--text-dim);
   transition:all .2s;
 }
-.avg-tab.active{background:var(--card);color:var(--gold);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.avg-tab.active{background:var(--card);color:var(--sky-deep);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
 .avg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .avg-card{
   background:var(--card);border:1px solid var(--card-border);
@@ -169,7 +173,7 @@ a{text-decoration:none;color:inherit}
   white-space:nowrap;background:var(--bg-warm);color:var(--text-dim);
   border:1px solid transparent;transition:all .2s;flex-shrink:0;
 }
-.tx-filter.active{background:var(--gold-soft);color:var(--gold);border-color:var(--gold-glow)}
+.tx-filter.active{background:var(--sky-soft);color:var(--sky-deep);border-color:rgba(82,180,200,0.3)}
 .tx-date-group{margin-bottom:12px}
 .tx-date-label{font-size:.65rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding-left:2px}
 .tx-item{
@@ -207,13 +211,13 @@ a{text-decoration:none;color:inherit}
   width:36px;height:20px;border-radius:10px;
   background:var(--bg-warm);position:relative;transition:background .2s;flex-shrink:0;
 }
-.rec-toggle.on{background:var(--green-soft);border:1px solid var(--green)}
+.rec-toggle.on{background:var(--teal-soft);border:1px solid var(--teal)}
 .rec-toggle::after{
   content:'';position:absolute;top:2px;left:2px;
   width:16px;height:16px;border-radius:50%;
   background:var(--text-dim);transition:all .2s;
 }
-.rec-toggle.on::after{left:18px;background:var(--green)}
+.rec-toggle.on::after{left:18px;background:var(--teal)}
 .rec-del{font-size:.7rem;color:var(--red);padding:4px 8px;font-weight:600}
 
 /* ===== INSIGHTS TAB ===== */
@@ -225,8 +229,8 @@ a{text-decoration:none;color:inherit}
 .trend-bars{display:flex;align-items:flex-end;gap:4px;height:120px;padding-top:10px}
 .trend-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
 .trend-bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;transition:height .4s}
-.trend-bar.income-bar{background:var(--gold)}
-.trend-bar.expense-bar{background:var(--terracotta)}
+.trend-bar.income-bar{background:var(--sky)}
+.trend-bar.expense-bar{background:var(--gold)}
 .trend-label{font-size:.55rem;color:var(--text-dim);font-weight:500}
 .top-cats{margin-bottom:16px}
 .top-cat-item{
@@ -244,8 +248,8 @@ a{text-decoration:none;color:inherit}
 .comp-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
 .comp-label{font-size:.75rem;color:var(--text)}
 .comp-value{font-size:.75rem;font-weight:700}
-.comp-value.up{color:var(--terracotta)}
-.comp-value.down{color:var(--gold)}
+.comp-value.up{color:var(--rose)}
+.comp-value.down{color:var(--teal)}
 .comp-value.neutral{color:var(--text)}
 
 /* ===== SETTINGS ===== */
@@ -254,7 +258,7 @@ a{text-decoration:none;color:inherit}
   border-radius:var(--radius);padding:14px;box-shadow:var(--card-shadow);
   margin-bottom:12px;
 }
-.setting-title{font-size:.72rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.setting-title{font-size:.72rem;font-weight:700;color:var(--sky-deep);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
 .setting-row{padding:8px 0;border-bottom:1px solid var(--card-border)}
 .setting-row:last-child{border-bottom:none}
 .setting-label{font-size:.78rem;font-weight:500;color:var(--text)}
@@ -269,8 +273,8 @@ a{text-decoration:none;color:inherit}
   padding:8px 16px;border-radius:var(--radius-sm);font-size:.75rem;
   font-weight:600;transition:all .15s;
 }
-.btn-gold{background:var(--gold);color:#fff}
-.btn-gold:active{background:#b0922a}
+.btn-gold{background:var(--sky);color:#fff}
+.btn-gold:active{background:var(--sky-deep)}
 .btn-outline{border:1px solid var(--card-border);color:var(--text)}
 .btn-danger{background:var(--red-soft);color:var(--red)}
 
@@ -289,17 +293,17 @@ a{text-decoration:none;color:inherit}
   font-size:.58rem;font-weight:600;color:var(--text-dim);
   padding:4px 12px;transition:color .2s;
 }
-.nav-item.active{color:var(--gold)}
+.nav-item.active{color:var(--sky)}
 .nav-icon{font-size:1.2rem}
 
 /* ===== FAB (floating add button) ===== */
 .fab{
   position:fixed;bottom:72px;right:20px;
   width:52px;height:52px;border-radius:50%;
-  background:linear-gradient(135deg,var(--gold),var(--terracotta));
+  background:linear-gradient(135deg,var(--sky),var(--teal));
   color:#fff;font-size:1.5rem;font-weight:300;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 16px rgba(200,162,78,0.35);
+  box-shadow:0 4px 16px rgba(82,180,200,0.35);
   z-index:101;transition:transform .15s;
 }
 .fab:active{transform:scale(0.92)}
@@ -341,8 +345,8 @@ a{text-decoration:none;color:inherit}
   padding:6px 14px;font-size:.72rem;font-weight:600;
   background:var(--bg-warm);color:var(--text-dim);transition:all .15s;
 }
-.type-btn.active-expense{background:var(--terracotta-soft);color:var(--terracotta)}
-.type-btn.active-income{background:var(--gold-soft);color:var(--gold)}
+.type-btn.active-expense{background:var(--gold-soft);color:var(--gold)}
+.type-btn.active-income{background:var(--sky-soft);color:var(--sky-deep)}
 .cat-picker{display:flex;gap:5px;flex-wrap:wrap}
 .cat-chip{
   font-size:.65rem;font-weight:600;padding:5px 10px;border-radius:12px;
@@ -400,8 +404,8 @@ a{text-decoration:none;color:inherit}
 .inv-add-input::placeholder{color:var(--text-dim)}
 .bloom-link{
   display:block;text-align:center;margin-top:12px;
-  font-size:.72rem;color:var(--gold);font-weight:600;
-  padding:10px;background:var(--gold-soft);border-radius:var(--radius-sm);
+  font-size:.72rem;color:var(--sky-deep);font-weight:600;
+  padding:10px;background:var(--sky-soft);border-radius:var(--radius-sm);
 }
 
 /* ===== VIEWS ===== */
@@ -453,7 +457,7 @@ a{text-decoration:none;color:inherit}
     </div>
     <div id="invSummary"></div>
     <div id="invHistory"></div>
-    <a class="bloom-link" href="../Bloom/index.html" target="_blank">Open Bloom Portfolio</a>
+    <a class="bloom-link" href="../Bloom/index.html" target="_blank">Open Bloom Portfolio \u2192</a>
   </div>
 
   <!-- ===== INSIGHTS VIEW ===== -->
@@ -553,15 +557,15 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const CATEGORIES = {
-  food:           {label:'Food',          color:'#d97756', icon:'\u{1F354}'},
-  transport:      {label:'Transport',     color:'#5a8fd0', icon:'\u{1F697}'},
-  bills:          {label:'Bills',         color:'#9070c0', icon:'\u{1F4CB}'},
-  subscriptions:  {label:'Subscriptions', color:'#c060a0', icon:'\u{1F4F1}'},
-  shopping:       {label:'Shopping',      color:'#e0a030', icon:'\u{1F6CD}'},
-  health:         {label:'Health',        color:'#50a880', icon:'\u{1FA7A}'},
-  entertainment:  {label:'Entertainment', color:'#d06070', icon:'\u{1F3AC}'},
-  income:         {label:'Income',        color:'#4a8a52', icon:'\u{1F4B0}'},
-  other:          {label:'Other',         color:'#8a7a64', icon:'\u{1F4CC}'}
+  food:           {label:'Food',          color:'#c8884a', icon:'\u{1F354}'},
+  transport:      {label:'Transport',     color:'#52b4c8', icon:'\u{1F697}'},
+  bills:          {label:'Bills',         color:'#8878b0', icon:'\u{1F4CB}'},
+  subscriptions:  {label:'Subscriptions', color:'#c08898', icon:'\u{1F4F1}'},
+  shopping:       {label:'Shopping',      color:'#d0a840', icon:'\u{1F6CD}'},
+  health:         {label:'Health',        color:'#4a8a7a', icon:'\u{1FA7A}'},
+  entertainment:  {label:'Entertainment', color:'#c89090', icon:'\u{1F3AC}'},
+  income:         {label:'Income',        color:'#5aa088', icon:'\u{1F4B0}'},
+  other:          {label:'Other',         color:'#9a8e78', icon:'\u{1F4CC}'}
 };
 
 // Auto-categorization keywords
@@ -1180,8 +1184,8 @@ function renderTrendChart() {
     <div class="trend-chart">
       <div class="cat-title" style="margin-bottom:8px">Last 6 Months</div>
       <div style="display:flex;gap:10px;margin-bottom:6px">
-        <span style="font-size:.6rem;color:var(--gold)">\u25A0 Income</span>
-        <span style="font-size:.6rem;color:var(--terracotta)">\u25A0 Spent</span>
+        <span style="font-size:.6rem;color:var(--sky)">\u25A0 Income</span>
+        <span style="font-size:.6rem;color:var(--gold)">\u25A0 Spent</span>
       </div>
       <div class="trend-bars">${barsHTML}</div>
     </div>`;
@@ -1255,7 +1259,7 @@ function renderWeekdaySpending() {
     html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
       <span style="font-size:.68rem;width:28px;color:var(--text-dim);font-weight:600">${dayNames[i]}</span>
       <div style="flex:1;height:6px;background:var(--bg-warm);border-radius:3px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:var(--gold);border-radius:3px"></div>
+        <div style="height:100%;width:${pct}%;background:var(--sky);border-radius:3px"></div>
       </div>
       <span style="font-size:.65rem;width:50px;text-align:right;color:var(--text-dim)">${fmt(byDay[i])}</span>
     </div>`;
