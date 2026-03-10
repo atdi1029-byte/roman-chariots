@@ -1418,6 +1418,15 @@ function renderInvested() {
   const invMonths = new Set(data.investments.map(i => i.date.substring(0, 7)));
   const avgMonthly = invMonths.size > 0 ? allTimeTotal / invMonths.size : 0;
 
+  // Average monthly income (across all months with transactions)
+  const incomeByMonth = {};
+  data.transactions.filter(t => t.type === 'income').forEach(t => {
+    const m = t.date.substring(0, 7);
+    incomeByMonth[m] = (incomeByMonth[m] || 0) + t.amount;
+  });
+  const incomeMonths = Object.keys(incomeByMonth);
+  const avgIncome = incomeMonths.length > 0 ? incomeMonths.reduce((s, m) => s + incomeByMonth[m], 0) / incomeMonths.length : 0;
+
   // Summary
   let html = `<div class="inv-summary">
     <div class="inv-card">
@@ -1434,8 +1443,9 @@ function renderInvested() {
       <div class="inv-sub">${invMonths.size} month${invMonths.size !== 1 ? 's' : ''} tracked</div>
     </div>
     <div class="inv-card">
-      <div class="inv-label">% of Income</div>
-      <div class="inv-value">${getMonthIncome(mk) > 0 ? (thisMonthTotal / getMonthIncome(mk) * 100).toFixed(1) + '%' : '\u2014'}</div>
+      <div class="inv-label">% of Avg Income</div>
+      <div class="inv-value">${avgMonthly > 0 && avgIncome > 0 ? (avgMonthly / avgIncome * 100).toFixed(1) + '%' : '\u2014'}</div>
+      <div class="inv-sub" style="color:var(--sky);margin-top:4px">Goal: 10%</div>
     </div>
   </div>`;
   document.getElementById('invSummary').innerHTML = html;
