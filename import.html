@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html><head><title>Import Oct 2025</title></head>
+<body>
+<h2>Import October 2025 Transactions</h2>
+<button onclick="doImport()" style="font-size:1.2rem;padding:12px 24px">Import Now</button>
+<div id="result"></div>
+<script>
+function doImport() {
+  const KEY = 'roman_chariots_v1';
+  let data;
+  try {
+    data = JSON.parse(localStorage.getItem(KEY));
+    if (!data || !data.transactions) throw 0;
+  } catch(e) {
+    data = { transactions: [], recurring: [], patterns: {}, settings: { name: '', syncUrl: '' }, lastModified: Date.now() };
+  }
+
+  const oct = [
+    // Oct 5
+    {text:'Grocery', amount:15, type:'expense', category:'food', date:'2025-10-05'},
+    {text:'Salary', amount:256, type:'income', category:'income', date:'2025-10-05'},
+    // Oct 6
+    {text:'Toll', amount:6, type:'expense', category:'transport', date:'2025-10-06'},
+    {text:'Grocery', amount:37.50, type:'expense', category:'food', date:'2025-10-06'},
+    // Oct 7
+    {text:'Salary', amount:350, type:'income', category:'income', date:'2025-10-07'},
+    // Oct 8
+    {text:'Salary', amount:350, type:'income', category:'income', date:'2025-10-08'},
+    {text:'Grocery', amount:20, type:'expense', category:'food', date:'2025-10-08'},
+    {text:'Macrofactor App', amount:72, type:'expense', category:'subscriptions', date:'2025-10-08'},
+    {text:'Salary', amount:300, type:'income', category:'income', date:'2025-10-08'},
+    // Oct 10
+    {text:'Mexican', amount:31, type:'expense', category:'food', date:'2025-10-10'},
+    {text:'Fuel', amount:2, type:'expense', category:'transport', date:'2025-10-10'},
+    // Oct 12
+    {text:'Insurance', amount:166, type:'expense', category:'bills', date:'2025-10-12', recurring:true},
+    {text:'Grocery', amount:32, type:'expense', category:'food', date:'2025-10-12'},
+    {text:'Salary', amount:330, type:'income', category:'income', date:'2025-10-12'},
+    // Oct 14
+    {text:'Pharmacy Stuff', amount:26, type:'expense', category:'health', date:'2025-10-14'},
+    {text:'Salary', amount:214, type:'income', category:'income', date:'2025-10-14'},
+    {text:'Salary', amount:15, type:'income', category:'income', date:'2025-10-14'},
+    // Oct 15
+    {text:'Pharmacy Stuff', amount:27, type:'expense', category:'health', date:'2025-10-15'},
+    {text:'Grocery', amount:38, type:'expense', category:'food', date:'2025-10-15'},
+    // Oct 17
+    {text:'Fuel', amount:32, type:'expense', category:'transport', date:'2025-10-17'},
+    // Oct 18
+    {text:'Salary', amount:368, type:'income', category:'income', date:'2025-10-18'},
+    // Oct 19
+    {text:'Pharmacy Stuff', amount:35, type:'expense', category:'health', date:'2025-10-19'},
+    {text:'Grocery', amount:28, type:'expense', category:'food', date:'2025-10-19'},
+    {text:'Salary', amount:53, type:'income', category:'income', date:'2025-10-19'},
+    {text:'Salary', amount:300, type:'income', category:'income', date:'2025-10-19'},
+    {text:'Salary', amount:20, type:'income', category:'income', date:'2025-10-19'},
+    {text:'Fuel', amount:31, type:'expense', category:'transport', date:'2025-10-19'},
+    // Oct 20
+    {text:'YMCA Membership', amount:28, type:'expense', category:'subscriptions', date:'2025-10-20', recurring:true},
+    // Oct 21
+    {text:'Grocery', amount:10, type:'expense', category:'food', date:'2025-10-21'},
+    // Oct 23
+    {text:'Grocery', amount:32, type:'expense', category:'food', date:'2025-10-23'},
+    {text:'Fuel', amount:29, type:'expense', category:'transport', date:'2025-10-23'},
+    {text:'Salary', amount:220, type:'income', category:'income', date:'2025-10-23'},
+    // Oct 25
+    {text:'Grocery', amount:23, type:'expense', category:'food', date:'2025-10-25'},
+    {text:'Salary', amount:311, type:'income', category:'income', date:'2025-10-25'},
+    // Oct 26
+    {text:'Fuel', amount:32, type:'expense', category:'transport', date:'2025-10-26'},
+    {text:'Cell Phone', amount:88, type:'expense', category:'bills', date:'2025-10-26', recurring:true},
+    // Oct 28
+    {text:'Salary', amount:66, type:'income', category:'income', date:'2025-10-28'},
+    {text:'Grocery', amount:32, type:'expense', category:'food', date:'2025-10-28'},
+    {text:'Salary', amount:50, type:'income', category:'income', date:'2025-10-28'},
+    // Oct 29
+    {text:'Cat Stuff', amount:42, type:'expense', category:'other', date:'2025-10-29'},
+    // Oct 30
+    {text:'Grocery', amount:11, type:'expense', category:'food', date:'2025-10-30'},
+    // Oct 31
+    {text:'Fuel', amount:29, type:'expense', category:'transport', date:'2025-10-31'},
+  ];
+
+  let added = 0;
+  oct.forEach(function(t) {
+    const d = new Date(t.date + 'T12:00:00');
+    data.transactions.push({
+      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2,6),
+      text: t.text,
+      amount: t.amount,
+      type: t.type,
+      category: t.category,
+      date: t.date,
+      time: '12:00',
+      dayOfWeek: d.getDay(),
+      recurring: t.recurring || false,
+      notes: ''
+    });
+    added++;
+  });
+
+  data.lastModified = Date.now();
+  localStorage.setItem(KEY, JSON.stringify(data));
+  document.getElementById('result').innerHTML = '<h3 style="color:green">Done! Added ' + added + ' transactions. Go back to the app and reload.</h3>';
+}
+</script>
+</body>
+</html>
