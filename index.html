@@ -2136,7 +2136,7 @@ function doSync(showFeedback) {
 function loadFromCloud(showToast) {
   const ep = getSyncUrl();
   if (!ep) { if (showToast) toast('No sync URL set'); return; }
-  if (!showToast && (_syncTimer || Date.now() - _lastLocalSave < 15000)) return;
+  if (!showToast && _syncTimer) return;
   if (showToast) toast('Loading from cloud...');
   const loadStartedAt = _lastLocalSave;
 
@@ -2535,6 +2535,13 @@ setTimeout(function() {
     syncReady = true;
   });
 }, 1500);
+
+// Auto-pull from cloud when app comes back to foreground
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible' && syncReady) {
+    loadFromCloud(false);
+  }
+});
 
 // Register service worker
 if ('serviceWorker' in navigator) {
