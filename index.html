@@ -1838,6 +1838,7 @@ function renderSettings() {
       <div class="setting-row" style="display:flex;gap:8px;padding-top:10px">
         <button class="btn btn-gold" onclick="doSync(true)">Push to Cloud</button>
         <button class="btn btn-outline" onclick="loadFromCloud(true)">Restore</button>
+        <button class="btn btn-outline" onclick="peekCloud()">Test Cloud</button>
       </div>
     </div>
     <div class="setting-group">
@@ -2163,6 +2164,23 @@ function loadFromCloud(showToast) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     renderAll();
     if (showToast) toast('Restored ' + cloud.transactions.length + ' transactions from cloud');
+  });
+}
+
+function peekCloud() {
+  var ep = getSyncUrl();
+  if (!ep) { toast('No sync URL set'); return; }
+  toast('Checking cloud...');
+  jsonpFetch(ep + '?action=load', function(err, resp) {
+    if (err) { toast('Cloud fetch failed: ' + err); return; }
+    if (!resp || !resp.ok) { toast('Cloud error: ' + ((resp && resp.error) || 'unknown')); return; }
+    if (!resp.data) { toast('Cloud is EMPTY — no data saved'); return; }
+    var cloud;
+    try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {
+      toast('Cloud data corrupted'); return;
+    }
+    if (!cloud || !cloud.transactions) { toast('Cloud data invalid'); return; }
+    toast('Cloud has ' + cloud.transactions.length + ' transactions, ' + (cloud.recurring || []).length + ' recurring. Safe to restore!');
   });
 }
 
