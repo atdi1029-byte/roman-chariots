@@ -2503,8 +2503,85 @@ function addAllReviewItems() {
   renderAll();
 }
 
+// ===== SEED NOV 2025 DATA (one-time import) =====
+function seedNov2025() {
+  if (localStorage.getItem('rc_seeded_nov2025')) return;
+  const txs = [
+    {text:'Grocery',amount:25,type:'expense',category:'groceries',date:'2025-11-01',dayOfWeek:6},
+    {text:'Grocery',amount:6,type:'expense',category:'groceries',date:'2025-11-03',dayOfWeek:1},
+    {text:'Grocery',amount:10,type:'expense',category:'groceries',date:'2025-11-04',dayOfWeek:2},
+    {text:'Fuel',amount:31,type:'expense',category:'transport',date:'2025-11-05',dayOfWeek:3},
+    {text:'Grocery',amount:27,type:'expense',category:'groceries',date:'2025-11-06',dayOfWeek:4},
+    {text:'Salary',amount:265,type:'income',category:'pay',date:'2025-11-07',dayOfWeek:5},
+    {text:'Grocery',amount:6,type:'expense',category:'groceries',date:'2025-11-07',dayOfWeek:5},
+    {text:'Fuel',amount:11,type:'expense',category:'transport',date:'2025-11-08',dayOfWeek:6},
+    {text:'Salary',amount:605,type:'income',category:'pay',date:'2025-11-09',dayOfWeek:0},
+    {text:'Grocery',amount:32,type:'expense',category:'groceries',date:'2025-11-09',dayOfWeek:0},
+    {text:'Fuel',amount:31,type:'expense',category:'transport',date:'2025-11-09',dayOfWeek:0},
+    {text:'Salary',amount:420,type:'income',category:'pay',date:'2025-11-11',dayOfWeek:2},
+    {text:'Grocery',amount:12,type:'expense',category:'groceries',date:'2025-11-11',dayOfWeek:2},
+    {text:'Salary',amount:5,type:'income',category:'pay',date:'2025-11-11',dayOfWeek:2},
+    {text:'Pharmacy Stuff',amount:23,type:'expense',category:'health',date:'2025-11-12',dayOfWeek:3},
+    {text:'Insurance',amount:166,type:'expense',category:'bills',date:'2025-11-12',dayOfWeek:3},
+    {text:'Fuel',amount:3,type:'expense',category:'transport',date:'2025-11-13',dayOfWeek:4},
+    {text:'Fuel',amount:30,type:'expense',category:'transport',date:'2025-11-13',dayOfWeek:4},
+    {text:'Grocery',amount:33,type:'expense',category:'groceries',date:'2025-11-14',dayOfWeek:5},
+    {text:'Salary',amount:357,type:'income',category:'pay',date:'2025-11-15',dayOfWeek:6},
+    {text:'Grocery',amount:12,type:'expense',category:'groceries',date:'2025-11-16',dayOfWeek:0},
+    {text:'Fuel',amount:32,type:'expense',category:'transport',date:'2025-11-17',dayOfWeek:1},
+    {text:'Grocery',amount:26,type:'expense',category:'groceries',date:'2025-11-17',dayOfWeek:1},
+    {text:'Salary',amount:219,type:'income',category:'pay',date:'2025-11-18',dayOfWeek:2},
+    {text:'YMCA Membership',amount:28,type:'expense',category:'health',date:'2025-11-20',dayOfWeek:4},
+    {text:'Pharmacy Stuff',amount:26,type:'expense',category:'health',date:'2025-11-21',dayOfWeek:5},
+    {text:'Grocery',amount:12,type:'expense',category:'groceries',date:'2025-11-21',dayOfWeek:5},
+    {text:'Grocery',amount:27,type:'expense',category:'groceries',date:'2025-11-22',dayOfWeek:6},
+    {text:'Fuel',amount:30,type:'expense',category:'transport',date:'2025-11-22',dayOfWeek:6},
+    {text:'Salary',amount:315,type:'income',category:'pay',date:'2025-11-23',dayOfWeek:0},
+    {text:'Grocery',amount:26,type:'expense',category:'groceries',date:'2025-11-23',dayOfWeek:0},
+    {text:'Grocery',amount:12,type:'expense',category:'groceries',date:'2025-11-24',dayOfWeek:1},
+    {text:'Cat Stuff',amount:22,type:'expense',category:'shopping',date:'2025-11-24',dayOfWeek:1},
+    {text:'Salary',amount:300,type:'income',category:'pay',date:'2025-11-25',dayOfWeek:2},
+    {text:'Salary',amount:243,type:'income',category:'pay',date:'2025-11-25',dayOfWeek:2},
+    {text:'Fuel',amount:32,type:'expense',category:'transport',date:'2025-11-25',dayOfWeek:2},
+    {text:'Toll',amount:6,type:'expense',category:'transport',date:'2025-11-26',dayOfWeek:3},
+    {text:'Grocery',amount:29,type:'expense',category:'groceries',date:'2025-11-26',dayOfWeek:3},
+    {text:'Cell Phone',amount:88,type:'expense',category:'bills',date:'2025-11-26',dayOfWeek:3},
+    {text:'Grocery',amount:6,type:'expense',category:'groceries',date:'2025-11-28',dayOfWeek:5},
+    {text:'Grocery',amount:21,type:'expense',category:'groceries',date:'2025-11-29',dayOfWeek:6},
+    {text:'Fuel',amount:30,type:'expense',category:'transport',date:'2025-11-29',dayOfWeek:6},
+    {text:'Car Things',amount:82,type:'expense',category:'transport',date:'2025-11-29',dayOfWeek:6},
+    {text:'Grocery',amount:6,type:'expense',category:'groceries',date:'2025-11-30',dayOfWeek:0}
+  ];
+  if (!data.transactions) data.transactions = [];
+  const existingDates = new Set(data.transactions.map(t => t.date + '|' + t.text + '|' + t.amount));
+  let added = 0;
+  txs.forEach((t, i) => {
+    const key = t.date + '|' + t.text + '|' + t.amount;
+    if (existingDates.has(key)) return;
+    data.transactions.push({
+      id: 'tx_seed_nov_' + i,
+      text: t.text,
+      amount: t.amount,
+      type: t.type,
+      category: t.category,
+      date: t.date,
+      time: '12:00',
+      dayOfWeek: t.dayOfWeek,
+      recurring: false,
+      notes: ''
+    });
+    added++;
+  });
+  if (added > 0) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+  localStorage.setItem('rc_seeded_nov2025', '1');
+  console.log('Seeded ' + added + ' Nov 2025 transactions');
+}
+
 // ===== INIT =====
 loadData();
+seedNov2025();
 loadCustomCategories();
 viewMonth = new Date();
 renderAll();
