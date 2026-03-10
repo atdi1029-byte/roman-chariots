@@ -1,10 +1,10 @@
-const CACHE_NAME = 'chariots-v16';
+const CACHE_NAME = 'chariots-v17';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
+  './chariot-192.png',
+  './chariot-512.png',
   './logo.png'
 ];
 
