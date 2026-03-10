@@ -764,6 +764,7 @@ let currentFilter = 'all';
 let editingTx = null; // transaction being edited
 let _syncTimer = null;
 let _lastLocalSave = 0;
+let syncReady = false;
 
 // ===== DATA =====
 function loadData() {
@@ -2090,11 +2091,13 @@ function exportData() {
 function clearData() {
   if (!confirm('Delete ALL data? This cannot be undone.')) return;
   if (!confirm('Are you really sure?')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  data = { transactions: [], recurring: [], patterns: {}, settings: { name: '', syncUrl: '' }, lastModified: Date.now() };
-  saveData();
+  // Preserve syncUrl so user doesn't lose their cloud connection
+  const savedSyncUrl = (data && data.settings && data.settings.syncUrl) || '';
+  data = { transactions: [], recurring: [], patterns: {}, settings: { name: '', syncUrl: savedSyncUrl }, lastModified: Date.now() };
+  // Save locally only — do NOT sync empty data to cloud
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   renderAll();
-  toast('All data cleared');
+  toast('Local data cleared (cloud untouched)');
 }
 
 // ===== CLOUD SYNC =====
@@ -2103,8 +2106,11 @@ function getSyncUrl() {
 }
 
 function syncToCloud() {
+  if (!syncReady) return;
   const ep = getSyncUrl();
   if (!ep) return;
+  // Safety: refuse to overwrite cloud with empty data
+  if (!data.transactions || data.transactions.length === 0) return;
   clearTimeout(_syncTimer);
   _syncTimer = setTimeout(() => doSync(false), 2000);
 }
@@ -2504,7 +2510,31 @@ viewMonth = new Date();
 renderAll();
 
 // Auto-load from cloud on startup — only applies if cloud data is newer (timestamp guard)
-setTimeout(function() { loadFromCloud(false); }, 1500);
+// syncReady stays false until this completes, blocking any cloud saves during restore
+setTimeout(function() {
+  const ep = getSyncUrl();
+  if (!ep) {
+    syncReady = true;
+    return;
+  }
+  // Inline cloud restore with syncReady gate — replaces loadFromCloud(false) call
+  jsonpFetch(ep + '?action=load', function(err, resp) {
+    if (!err && resp && resp.ok && resp.data) {
+      let cloud;
+      try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
+      if (cloud && cloud.transactions) {
+        if (!data.lastModified || (cloud.lastModified && cloud.lastModified > data.lastModified)) {
+          data = cloud;
+          CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
+          loadCustomCategories();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          renderAll();
+        }
+      }
+    }
+    syncReady = true;
+  });
+}, 1500);
 
 // Register service worker
 if ('serviceWorker' in navigator) {
