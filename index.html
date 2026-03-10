@@ -2633,10 +2633,93 @@ function seedDec2025() {
   console.log('Seeded ' + added + ' Dec 2025 transactions');
 }
 
+function seedJan2026() {
+  if (localStorage.getItem('rc_seeded_jan2026')) return;
+  const txs = [
+    {text:'Salary',amount:517,type:'income',category:'pay',date:'2026-01-01',dayOfWeek:4},
+    {text:'Grocery',amount:9,type:'expense',category:'groceries',date:'2026-01-01',dayOfWeek:4},
+    {text:'Fuel',amount:31,type:'expense',category:'transport',date:'2026-01-02',dayOfWeek:5},
+    {text:'Salary',amount:600,type:'income',category:'pay',date:'2026-01-03',dayOfWeek:6},
+    {text:'Salary',amount:15,type:'income',category:'pay',date:'2026-01-03',dayOfWeek:6},
+    {text:'Grocery',amount:37,type:'expense',category:'groceries',date:'2026-01-03',dayOfWeek:6},
+    {text:'Fuel',amount:27,type:'expense',category:'transport',date:'2026-01-05',dayOfWeek:1},
+    {text:'Car Things',amount:14,type:'expense',category:'transport',date:'2026-01-05',dayOfWeek:1},
+    {text:'Salary',amount:1021,type:'income',category:'pay',date:'2026-01-06',dayOfWeek:2},
+    {text:'Cat Stuff',amount:22,type:'expense',category:'shopping',date:'2026-01-06',dayOfWeek:2},
+    {text:'Grocery',amount:27,type:'expense',category:'groceries',date:'2026-01-08',dayOfWeek:4},
+    {text:'Car Things',amount:147,type:'expense',category:'transport',date:'2026-01-08',dayOfWeek:4},
+    {text:'Fuel',amount:29,type:'expense',category:'transport',date:'2026-01-09',dayOfWeek:5},
+    {text:'Car Things',amount:504,type:'expense',category:'transport',date:'2026-01-09',dayOfWeek:5},
+    {text:'Car Things',amount:4,type:'expense',category:'transport',date:'2026-01-10',dayOfWeek:6},
+    {text:'Grocery',amount:10,type:'expense',category:'groceries',date:'2026-01-10',dayOfWeek:6},
+    {text:'Pharmacy Stuff',amount:25,type:'expense',category:'health',date:'2026-01-11',dayOfWeek:0},
+    {text:'Salary',amount:300,type:'income',category:'pay',date:'2026-01-11',dayOfWeek:0},
+    {text:'Pharmacy Stuff',amount:12,type:'expense',category:'health',date:'2026-01-11',dayOfWeek:0},
+    {text:'Insurance',amount:166,type:'expense',category:'bills',date:'2026-01-12',dayOfWeek:1},
+    {text:'Grocery',amount:48,type:'expense',category:'groceries',date:'2026-01-12',dayOfWeek:1},
+    {text:'Fuel',amount:27,type:'expense',category:'transport',date:'2026-01-12',dayOfWeek:1},
+    {text:'Salary',amount:30,type:'income',category:'pay',date:'2026-01-13',dayOfWeek:2},
+    {text:'Eating Out',amount:17,type:'expense',category:'groceries',date:'2026-01-13',dayOfWeek:2},
+    {text:'Salary',amount:5,type:'income',category:'pay',date:'2026-01-13',dayOfWeek:2},
+    {text:'Grocery',amount:15,type:'expense',category:'groceries',date:'2026-01-14',dayOfWeek:3},
+    {text:'Car Things',amount:127,type:'expense',category:'transport',date:'2026-01-14',dayOfWeek:3},
+    {text:'Salary',amount:314,type:'income',category:'pay',date:'2026-01-15',dayOfWeek:4},
+    {text:'Fuel',amount:29,type:'expense',category:'transport',date:'2026-01-16',dayOfWeek:5},
+    {text:'Grocery',amount:33,type:'expense',category:'groceries',date:'2026-01-17',dayOfWeek:6},
+    {text:'Salary',amount:331,type:'income',category:'pay',date:'2026-01-18',dayOfWeek:0},
+    {text:'Grocery',amount:6,type:'expense',category:'groceries',date:'2026-01-18',dayOfWeek:0},
+    {text:'Fuel',amount:29,type:'expense',category:'transport',date:'2026-01-18',dayOfWeek:0},
+    {text:'Education',amount:16,type:'expense',category:'other',date:'2026-01-20',dayOfWeek:2},
+    {text:'Education',amount:85,type:'expense',category:'other',date:'2026-01-20',dayOfWeek:2},
+    {text:'Education',amount:21,type:'expense',category:'other',date:'2026-01-20',dayOfWeek:2},
+    {text:'Grocery',amount:12,type:'expense',category:'groceries',date:'2026-01-20',dayOfWeek:2},
+    {text:'YMCA Membership',amount:28,type:'expense',category:'health',date:'2026-01-20',dayOfWeek:2},
+    {text:'Grocery',amount:22,type:'expense',category:'groceries',date:'2026-01-21',dayOfWeek:3},
+    {text:'Salary',amount:22,type:'income',category:'pay',date:'2026-01-21',dayOfWeek:3},
+    {text:'Fuel',amount:31,type:'expense',category:'transport',date:'2026-01-22',dayOfWeek:4},
+    {text:'Education',amount:35,type:'expense',category:'other',date:'2026-01-23',dayOfWeek:5},
+    {text:'Car Things',amount:79,type:'expense',category:'transport',date:'2026-01-23',dayOfWeek:5},
+    {text:'Grocery',amount:37,type:'expense',category:'groceries',date:'2026-01-24',dayOfWeek:6},
+    {text:'Fuel',amount:27,type:'expense',category:'transport',date:'2026-01-24',dayOfWeek:6},
+    {text:'Eating Out',amount:8,type:'expense',category:'groceries',date:'2026-01-24',dayOfWeek:6},
+    {text:'Cell Phone',amount:88,type:'expense',category:'bills',date:'2026-01-26',dayOfWeek:1},
+    {text:'Education',amount:73,type:'expense',category:'other',date:'2026-01-27',dayOfWeek:2},
+    {text:'Cat Stuff',amount:31,type:'expense',category:'shopping',date:'2026-01-30',dayOfWeek:5},
+    {text:'Grocery',amount:38,type:'expense',category:'groceries',date:'2026-01-30',dayOfWeek:5},
+    {text:'Salary',amount:600,type:'income',category:'pay',date:'2026-01-31',dayOfWeek:6}
+  ];
+  if (!data.transactions) data.transactions = [];
+  const existingDates = new Set(data.transactions.map(t => t.date + '|' + t.text + '|' + t.amount));
+  let added = 0;
+  txs.forEach((t, i) => {
+    const key = t.date + '|' + t.text + '|' + t.amount;
+    if (existingDates.has(key)) return;
+    data.transactions.push({
+      id: 'tx_seed_jan_' + i,
+      text: t.text,
+      amount: t.amount,
+      type: t.type,
+      category: t.category,
+      date: t.date,
+      time: '12:00',
+      dayOfWeek: t.dayOfWeek,
+      recurring: false,
+      notes: ''
+    });
+    added++;
+  });
+  if (added > 0) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+  localStorage.setItem('rc_seeded_jan2026', '1');
+  console.log('Seeded ' + added + ' Jan 2026 transactions');
+}
+
 // ===== INIT =====
 loadData();
 seedNov2025();
 seedDec2025();
+seedJan2026();
 loadCustomCategories();
 viewMonth = new Date();
 renderAll();
