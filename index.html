@@ -651,14 +651,16 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const DEFAULT_CATEGORIES = {
-  food:           {label:'Food',          color:'#c8884a', icon:'\u{1F354}'},
+  groceries:      {label:'Groceries',     color:'#c8884a', icon:'\u{1F6D2}'},
+  eatingout:      {label:'Eating Out',    color:'#d4874a', icon:'\u{1F354}'},
   transport:      {label:'Transport',     color:'#52b4c8', icon:'\u{1F697}'},
   bills:          {label:'Bills',         color:'#8878b0', icon:'\u{1F4CB}'},
   subscriptions:  {label:'Subscriptions', color:'#c08898', icon:'\u{1F4F1}'},
   shopping:       {label:'Shopping',      color:'#d0a840', icon:'\u{1F6CD}'},
   health:         {label:'Health',        color:'#4a8a7a', icon:'\u{1FA7A}'},
   entertainment:  {label:'Entertainment', color:'#c89090', icon:'\u{1F3AC}'},
-  income:         {label:'Income',        color:'#5aa088', icon:'\u{1F4B0}'},
+  pay:            {label:'Pay',           color:'#5aa088', icon:'\u{1F4B0}'},
+  tips:           {label:'Tips',          color:'#6ab898', icon:'\u{1F4B5}'},
   other:          {label:'Other',         color:'#9a8e78', icon:'\u{1F4CC}'}
 };
 let CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
@@ -678,25 +680,27 @@ function loadCustomCategories() {
 
 // Auto-categorization keywords
 const KEYWORDS = {
-  food: ['chipotle','mcdonalds','mcdonald','burger','wendy','taco bell','subway','pizza','domino',
+  eatingout: ['chipotle','mcdonalds','mcdonald','burger','wendy','taco bell','subway','domino',
     'starbucks','dunkin','coffee','doordash','ubereats','grubhub','postmates','restaurant','dine',
-    'dinner','lunch','breakfast','grocery','groceries','kroger','walmart food','aldi','trader joe',
-    'whole foods','safeway','publix','heb','food','eat','meal','snack','bakery','deli','sushi',
-    'chinese','mexican','thai','indian','italian','panda express','chick-fil-a','popeyes','sonic',
-    'arby','five guys','in-n-out','shake shack','panera','chipotle','wingstop','buffalo wild wings',
-    'ihop','denny','waffle house','cracker barrel','olive garden','applebee','chili','outback',
-    'red lobster','longhorn','texas roadhouse','cook','takeout','take out','delivery',
+    'dinner','lunch','breakfast','sushi','chinese','mexican','thai','indian','italian',
+    'panda express','chick-fil-a','popeyes','sonic','arby','five guys','in-n-out','shake shack',
+    'panera','wingstop','buffalo wild wings','ihop','denny','waffle house','cracker barrel',
+    'olive garden','applebee','chili','outback','red lobster','longhorn','texas roadhouse',
+    'takeout','take out','delivery','eat out','dine out','drive thru','drive through'],
+  groceries: ['grocery','groceries','kroger','walmart food','aldi','trader joe','whole foods',
+    'safeway','publix','heb','bakery','deli','food','meal','snack','cook',
     'chicken','beef','pork','steak','sausage','bacon','ham','turkey','fish','salmon','shrimp','tuna',
     'egg','eggs','milk','cheese','butter','yogurt','cream','bread','rice','pasta','noodle','cereal',
     'oat','flour','sugar','salt','pepper','oil','vinegar','sauce','ketchup','mustard','mayo',
     'apple','banana','orange','grape','berry','strawberry','blueberry','lemon','lime','mango',
     'tomato','potato','onion','garlic','lettuce','spinach','broccoli','carrot','corn','bean',
     'pepper','cucumber','avocado','mushroom','celery','cabbage','pea','squash',
-    'juice','water','soda','tea','drink','beverage',
+    'juice','water','soda','tea','drink','beverage','pizza',
     'candy','candies','chocolate','cookie','cookies','cake','pie','ice cream','biscuit','biscuits',
     'chip','chips','crackers','pretzel','popcorn','nuts','peanut','almond',
     'cottage cheese','cream cheese','sour cream','whipped cream','dressing',
-    'frozen','canned','organic','produce','meat','seafood','fruit','vegetable'],
+    'frozen','canned','organic','produce','meat','seafood','fruit','vegetable','paper','soap',
+    'toothpaste','shampoo','detergent','tissue','towel'],
   transport: ['gas','shell','chevron','exxon','bp','mobil','marathon','sunoco','speedway','wawa',
     'fuel','gasoline','uber','lyft','taxi','cab','parking','toll','car wash','carwash','oil change',
     'mechanic','tire','auto','vehicle','bus','train','metro','transit','fare'],
@@ -717,10 +721,11 @@ const KEYWORDS = {
     'playstation','xbox','nintendo','steam','bar','pub','brewery','drink','drinks','alcohol',
     'beer','wine','liquor','club','bowling','arcade','amusement','museum','zoo','park','event',
     'festival','sports','bet','betting','lottery'],
-  income: ['paycheck','salary','wage','direct deposit','deposit','refund','reimbursement','rebate',
+  pay: ['paycheck','salary','wage','direct deposit','deposit','refund','reimbursement','rebate',
     'freelance','gig','payment received','payment','sold','sale','transfer in','bonus','commission',
-    'tip','tips','dividend','interest','cash back','cashback','venmo received','zelle received',
-    'income','earned','paid']
+    'dividend','interest','cash back','cashback','venmo received','zelle received',
+    'income','earned','paid','pay'],
+  tips: ['tip','tips','gratuity']
 };
 
 // ===== STATE =====
@@ -739,6 +744,17 @@ function loadData() {
   } catch(e) {
     data = { transactions: [], recurring: [], patterns: {}, settings: { name: '', syncUrl: '' }, lastModified: Date.now() };
   }
+  // Migrate old categories
+  let migrated = false;
+  (data.transactions || []).forEach(t => {
+    if (t.category === 'food') { t.category = 'groceries'; migrated = true; }
+    if (t.category === 'income') { t.category = 'pay'; migrated = true; }
+  });
+  (data.recurring || []).forEach(r => {
+    if (r.category === 'food') { r.category = 'groceries'; migrated = true; }
+    if (r.category === 'income') { r.category = 'pay'; migrated = true; }
+  });
+  if (migrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   return data;
 }
 
@@ -793,7 +809,10 @@ function autoCategory(text) {
 
 function autoType(text) {
   const lower = text.toLowerCase();
-  for (const w of KEYWORDS.income) {
+  for (const w of KEYWORDS.pay) {
+    if (lower.includes(w)) return 'income';
+  }
+  for (const w of KEYWORDS.tips) {
     if (lower.includes(w)) return 'income';
   }
   return 'expense';
@@ -815,7 +834,7 @@ function parseQuickInput() {
   }
   // Auto detect type and category
   const type = autoType(text);
-  const cat = type === 'income' ? 'income' : autoCategory(text);
+  const cat = type === 'income' ? autoCategory(text) || 'pay' : autoCategory(text);
   // Update fields
   if (amount > 0) document.getElementById('fieldAmount').value = amount.toFixed(2);
   if (text) {
@@ -1585,7 +1604,7 @@ function renderCatManager() {
   let html = '';
   for (const [key, info] of Object.entries(CATEGORIES)) {
     const isDefault = !!DEFAULT_CATEGORIES[key];
-    const isProtected = key === 'income' || key === 'other';
+    const isProtected = key === 'pay' || key === 'tips' || key === 'other';
     html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--card-border)">' +
       '<span style="font-size:1rem">' + info.icon + '</span>' +
       '<span style="flex:1;font-size:.82rem;font-weight:500;color:var(--text-bright)">' + esc(info.label) + '</span>' +
@@ -1616,7 +1635,7 @@ function addCustomCategory() {
 }
 
 function deleteCategory(key) {
-  if (key === 'income' || key === 'other') return;
+  if (key === 'pay' || key === 'tips' || key === 'other') return;
   const info = CATEGORIES[key];
   if (!confirm('Delete "' + info.label + '" category? Existing transactions will show as Other.')) return;
 
@@ -1687,7 +1706,7 @@ function setType(t) {
   const inc = document.getElementById('typeIncome');
   exp.className = 'type-btn' + (t === 'expense' ? ' active-expense' : '');
   inc.className = 'type-btn' + (t === 'income' ? ' active-income' : '');
-  if (t === 'income') selectCategory('income');
+  if (t === 'income') selectCategory('pay');
 }
 
 function selectCategory(cat) {

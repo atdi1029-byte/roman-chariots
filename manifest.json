@@ -1,6 +1,6 @@
 {
   "name": "Roman Chariots",
-  "short_name": "Chariots",
+  "short_name": "Roman Chariots",
   "description": "Smart Budgeting & Spending Tracker",
   "start_url": "./index.html",
   "display": "standalone",
