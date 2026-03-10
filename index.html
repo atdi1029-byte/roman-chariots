@@ -1445,7 +1445,7 @@ function renderInvested() {
     <div class="inv-card">
       <div class="inv-label">% of Avg Income</div>
       <div class="inv-value">${avgMonthly > 0 && avgIncome > 0 ? (avgMonthly / avgIncome * 100).toFixed(1) + '%' : '\u2014'}</div>
-      <div class="inv-sub" style="color:var(--sky);margin-top:4px">Goal: 10%</div>
+      <div class="inv-sub" style="color:var(--sky);margin-top:4px">Goal: 10% (${avgIncome > 0 ? fmt(avgIncome * 0.10) : '\u2014'}/mo)</div>
     </div>
   </div>`;
   document.getElementById('invSummary').innerHTML = html;
