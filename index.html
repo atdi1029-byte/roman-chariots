@@ -21,6 +21,15 @@ body{
   overflow-x:hidden;
   background:#faf5ee;
   color:#3a3028;
+  position:relative;
+}
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+  background:url('logo.png') center center / contain no-repeat;
+  filter:blur(2px) saturate(0.7);
+  opacity:0.25;
+  z-index:0;
+  pointer-events:none;
 }
 input,button,textarea,select{font-family:inherit;font-size:inherit;border:none;outline:none;background:none}
 button{cursor:pointer}
@@ -63,6 +72,7 @@ a{text-decoration:none;color:inherit}
   max-width:480px;margin:0 auto;
   padding:calc(env(safe-area-inset-top,8px) + 12px) 16px 100px;
   min-height:100vh;min-height:100dvh;
+  position:relative;z-index:1;
 }
 
 /* ===== HEADER ===== */
@@ -70,7 +80,8 @@ a{text-decoration:none;color:inherit}
   display:flex;align-items:center;justify-content:space-between;
   margin-bottom:16px;
 }
-.header-left{}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-logo{width:48px;height:48px;border-radius:50%;object-fit:contain;background:#faf5ee;box-shadow:0 2px 8px rgba(100,80,50,0.15)}
 .app-title{
   font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;
   color:var(--text-bright);letter-spacing:-0.5px;
@@ -129,6 +140,20 @@ a{text-decoration:none;color:inherit}
   font-size:.78rem;color:var(--text);line-height:1.4;
 }
 .insight-icon{margin-right:6px}
+
+/* ===== TIPS ===== */
+.tips-section{margin-bottom:16px}
+.tip-card{
+  background:var(--card);border:1px solid var(--card-border);
+  border-radius:var(--radius);padding:14px 16px;
+  box-shadow:var(--card-shadow);margin-bottom:8px;
+  font-size:.78rem;color:var(--text);line-height:1.5;
+}
+.tip-card .tip-title{
+  font-weight:700;color:var(--sky-deep);font-size:.72rem;
+  text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;
+}
+.tip-card .tip-text{color:var(--text)}
 
 /* ===== AVERAGES ===== */
 .avg-section{margin-bottom:16px}
@@ -490,8 +515,11 @@ a{text-decoration:none;color:inherit}
   <!-- HEADER -->
   <div class="header">
     <div class="header-left">
-      <div class="app-title">Roman <span>Chariots</span></div>
-      <div class="header-month" id="headerMonth"></div>
+      <img src="logo.png" alt="Roman Chariots" class="header-logo">
+      <div>
+        <div class="app-title">Roman <span>Chariots</span></div>
+        <div class="header-month" id="headerMonth"></div>
+      </div>
     </div>
     <div class="month-nav">
       <button class="month-btn" onclick="changeMonth(-1)">&larr;</button>
@@ -505,6 +533,7 @@ a{text-decoration:none;color:inherit}
     <div class="cat-section" id="catBreakdown"></div>
     <div id="insightCards"></div>
     <div class="avg-section" id="avgSection"></div>
+    <div id="tipsSection"></div>
   </div>
 
   <!-- ===== TRANSACTIONS VIEW ===== -->
@@ -998,6 +1027,9 @@ function renderDashboard() {
 
   // Averages
   renderAverages();
+
+  // Tips (only on first render, not on every re-render)
+  if (!document.getElementById('tipsSection').innerHTML) renderTips();
 }
 
 // ===== SMART INSIGHTS =====
@@ -1076,6 +1108,245 @@ function renderSmartInsights(mk) {
   // Limit to 5 insights
   const html = insights.slice(0, 5).map(i => `<div class="insight-card">${i}</div>`).join('');
   document.getElementById('insightCards').innerHTML = html;
+}
+
+// ===== TIPS =====
+const TIPS = [
+  {t:'The 24-Hour Rule', d:'Before any non-essential purchase over $30, wait 24 hours. Most impulse urges fade — saving you hundreds per month.'},
+  {t:'Pay Yourself First', d:'Transfer savings the day you get paid, not at month\'s end. Treat it like a bill. Even $50/paycheck adds up to $1,300/year.'},
+  {t:'The Latte Factor', d:'Small daily habits ($5 coffee, $10 lunch) compound fast. $7/day = $2,555/year. Pack lunch twice a week and save $1,000+.'},
+  {t:'Automate Everything', d:'Set up auto-transfers to savings, auto-pay bills, auto-invest. Removes willpower from the equation entirely.'},
+  {t:'50/30/20 Rule', d:'Aim for 50% needs, 30% wants, 20% savings. It\'s a simple framework — even getting close to it puts you ahead of most people.'},
+  {t:'No-Spend Days', d:'Pick 2-3 days a week where you spend $0. Bring lunch, skip the drive-thru, stay in. Track your streak for motivation.'},
+  {t:'Envelope Budgeting', d:'Allocate cash (physical or digital) to categories. When the envelope is empty, you\'re done for the month. Prevents overspending.'},
+  {t:'Cancel & Audit', d:'Review subscriptions monthly. That $12/mo you forgot about is $144/year. Stack 3-4 unused subs and you\'re losing $500+.'},
+  {t:'The 1% Rule', d:'Save 1% more of your income each month. You won\'t notice the difference, but in a year you\'re saving 12% more.'},
+  {t:'Meal Prep Sunday', d:'Cooking in bulk once a week saves $50-100/week vs eating out. Prep 3-4 meals, freeze portions, eat like a king.'},
+  {t:'Round-Up Savings', d:'Round every purchase up to the nearest dollar and save the difference. Apps do this automatically — it\'s painless micro-saving.'},
+  {t:'Cash Back Stacking', d:'Use a cash-back credit card + store rewards + coupon apps (Ibotta, Fetch). Triple-dip on every grocery run.'},
+  {t:'Price Per Use', d:'Before buying, divide cost by expected uses. A $200 jacket worn 100 times = $2/wear. A $50 shirt worn twice = $25/wear. Buy quality.'},
+  {t:'The 10-10-10 Rule', d:'Before a purchase, ask: How will I feel about this in 10 minutes? 10 months? 10 years? Puts spending in perspective.'},
+  {t:'Negotiate Bills', d:'Call your phone, insurance, and internet providers once a year. Ask for a better rate. Most give 10-20% off just for asking.'},
+  {t:'Zero-Based Budget', d:'Give every dollar a job. Income minus all expenses (including savings) should equal zero. No unaccounted money floating around.'},
+  {t:'Visual Progress', d:'Track savings goals visually — a chart, thermometer, or progress bar. Seeing progress triggers dopamine and keeps you motivated.'},
+  {t:'Generic Swap', d:'Switch to store-brand groceries, generic medications, and off-brand basics. Same quality, 20-40% cheaper on average.'},
+  {t:'Sinking Funds', d:'Set aside small monthly amounts for predictable big expenses (car repair, holidays, annual insurance). No more surprise budget busters.'},
+  {t:'The 72-Hour Cart', d:'Leave online shopping carts for 72 hours. Most items get removed. Retailers may even send you a discount code to come back.'},
+  {t:'Utility Savings', d:'Unplug devices, use LED bulbs, adjust thermostat 2°. Small tweaks cut electric bills 10-15%. That\'s $200-400/year.'},
+  {t:'Reward Yourself', d:'Budget a small "fun money" allowance guilt-free. Deprivation leads to blowouts. A planned $50/mo treat keeps you on track.'},
+  {t:'Track Every Dollar', d:'Awareness is the first step. People who track spending save 15-20% more than those who don\'t. This app is your weapon.'},
+  {t:'Freeze Your Credit Card', d:'Literally put it in a bag of water in the freezer. The thaw time forces you to think before impulse buying online.'},
+  {t:'The Stranger Test', d:'Would you rather have the item, or the cash equivalent handed to you by a stranger? If you\'d take the cash — don\'t buy it.'},
+  {t:'Batch Errands', d:'Combine trips to save gas. Plan a weekly errand route instead of daily one-off drives. Saves 20-30% on fuel.'},
+  {t:'Library Over Bookstore', d:'Libraries have books, audiobooks, movies, even museum passes — all free. Use Libby for digital. Save $200+/year on media.'},
+  {t:'Sell Before You Buy', d:'Want something new? Sell something old first. Funds the purchase AND declutters. One in, one out.'},
+  {t:'Annual vs Monthly', d:'Pay annual subscriptions when possible — most offer 15-20% discount over monthly billing. Do the math, it adds up.'},
+  {t:'Emergency Fund First', d:'Before investing, build 3-6 months of expenses in a high-yield savings account. It\'s boring but prevents financial catastrophe.'},
+  {t:'Cashback Credit Cards', d:'If you pay in full monthly, a 2% cashback card earns you money on spending you\'d do anyway. $3,000/mo spend = $720/year back.'},
+  {t:'The 30-Day List', d:'Write down wants instead of buying them. If you still want it after 30 days, it might be worth it. Most things quietly disappear from the list.'},
+  {t:'Grocery List Discipline', d:'Never shop without a list. People who shop with lists spend 23% less. Bonus: eat before you go. Hungry shoppers overspend.'},
+  {t:'High-Yield Savings', d:'Don\'t let cash sit in a 0.01% checking account. Move emergency funds and sinking funds to a HYSA earning 4-5%. Free money.'},
+  {t:'Unsubscribe From Emails', d:'Marketing emails exist to make you buy. Unsubscribe from retail newsletters. What you don\'t see, you don\'t want.'},
+  {t:'The 10-Second Rule', d:'At checkout, pause 10 seconds per item and ask "Do I really need this?" Removes 1-3 impulse items per trip.'},
+  {t:'Water Over Everything', d:'Drink water at restaurants instead of $3-5 beverages. A family of 4 saves $600-1,200/year just from this one swap.'},
+  {t:'Thermostat Hacks', d:'Every degree you adjust saves ~3% on heating/cooling. A programmable thermostat pays for itself in 2-3 months.'},
+  {t:'Buy Used First', d:'Check Facebook Marketplace, Craigslist, thrift stores before buying new. Furniture, electronics, clothes — often 50-80% off retail.'},
+  {t:'Debt Avalanche', d:'Pay minimums on all debts, throw extra cash at the highest interest rate first. Mathematically optimal — saves the most in interest.'},
+  {t:'Debt Snowball', d:'Pay off smallest debts first for quick wins and motivation. Not optimal mathematically, but psychology matters more than math.'},
+  {t:'Comparison Shopping', d:'Spend 5 minutes checking 2-3 prices before any purchase over $50. Price-comparison browser extensions do this automatically.'},
+  {t:'The Jar Method', d:'Keep a change jar. Empty pockets daily. It adds up to $100-200/year without even trying. Deposit it into savings quarterly.'},
+  {t:'Brown Bag It', d:'Bringing lunch to work 3x/week instead of buying saves $2,000-3,000/year. Leftovers from dinner are the easiest option.'},
+  {t:'Free Entertainment', d:'Parks, hiking, library events, free museum days, community concerts. The best things in life really are free — or close to it.'},
+  {t:'Seasonal Shopping', d:'Buy winter clothes in spring, summer gear in fall. Off-season clearance saves 40-70%. Plan ahead and stock up.'},
+  {t:'DIY Before Hiring', d:'YouTube has a tutorial for almost everything. Basic plumbing, car maintenance, home repairs — save $100-500 per job.'},
+  {t:'Ride the Wave', d:'Gas prices change throughout the week. Fill up on Monday or Tuesday — typically the cheapest days. Use GasBuddy to compare.'},
+  {t:'Skip Extended Warranties', d:'They\'re almost always a bad deal. Most electronics fail early (manufacturer warranty) or last years. Save that $50-200.'},
+  {t:'Refinance Debt', d:'If interest rates have dropped since you got your mortgage, car loan, or student loans, refinancing can save thousands over the life of the loan.'},
+  {t:'The Two-Week Test', d:'Think you can\'t cut something? Go without it for two weeks. Most "essentials" turn out to be habits you can live without.'},
+  {t:'Loyalty Programs', d:'Sign up for free loyalty programs at stores you already shop at. Points, gas discounts, birthday freebies — it all adds up.'},
+  {t:'Carpooling', d:'Split commute costs with a coworker. Halving your gas and parking costs could save $1,500-3,000/year.'},
+  {t:'Cook Double', d:'Make double portions at dinner. Tomorrow\'s lunch is handled with zero extra effort. Saves time and money simultaneously.'},
+  {t:'Tax-Advantaged Accounts', d:'Max out 401(k) match first — it\'s free money. Then Roth IRA, then HSA. Tax savings compound massively over decades.'},
+  {t:'Avoid Lifestyle Creep', d:'When you get a raise, save at least half of the increase. Your spending should grow slower than your income. That gap is wealth.'},
+  {t:'No-Brand Challenge', d:'Try one month buying only store brands. You\'ll discover that most taste identical. Keep the swaps that work, save 25%+ on groceries.'},
+  {t:'Cash Envelope Date', d:'Set a cash budget for dates and social outings. When it\'s gone, get creative with free activities. Prevents social spending spirals.'},
+  {t:'Delete Shopping Apps', d:'Remove Amazon, Target, etc. from your phone. Adding friction (opening a browser, logging in) dramatically reduces impulse purchases.'},
+  {t:'One In, One Out', d:'For every new item you buy, donate or sell one existing item. Prevents clutter, forces intentional purchasing, and may fund the new buy.'},
+  {t:'Price Match Policies', d:'Many stores (Target, Walmart, Best Buy) price-match competitors. Ask at checkout — one question can save $5-50 per item.'},
+  {t:'Haircut Savings', d:'Stretch haircuts from every 4 weeks to every 6. That\'s 4 fewer haircuts/year. At $25-50 each, that\'s $100-200 saved.'},
+  {t:'Bring Your Own', d:'Carry a water bottle, coffee thermos, and snacks. Avoid vending machines, gas station stops, and overpriced airport food.'},
+  {t:'Birthday Freebies', d:'Sign up for restaurant and retail birthday clubs. Free meals, desserts, and discounts — many require no purchase.'},
+  {t:'Cooling Off Period', d:'After any major financial decision (car, furniture, electronics), sleep on it. Morning clarity prevents afternoon regret.'},
+  {t:'Meatless Mondays', d:'Replacing meat with beans, lentils, or tofu one day a week saves $15-25/week ($780-1,300/year) and is healthier.'},
+  {t:'Cash Over Card', d:'Studies show people spend 12-18% less when paying cash. The physical pain of handing over bills makes you think twice.'},
+  {t:'Tax Refund Strategy', d:'Don\'t blow your refund. Split it: 50% savings/debt, 30% needs, 20% wants. A $3,000 refund becomes $1,500 in savings automatically.'},
+  {t:'Coupon Stacking', d:'Combine manufacturer coupons + store coupons + sale prices + cashback apps. Four layers of savings on a single item.'},
+  {t:'Phantom Loads', d:'Devices on standby cost $100-200/year in "phantom" electricity. Use smart power strips that cut power when devices are off.'},
+  {t:'Wait for Sales', d:'Know the annual sale calendar: Presidents Day (mattresses), Memorial Day (appliances), Black Friday (electronics), January (fitness).'},
+  {t:'Potluck Socializing', d:'Host potluck dinners instead of going out. Everyone brings a dish — total cost per person drops from $40-60 to $5-10.'},
+  {t:'Skip the Gym', d:'A $50/mo gym membership is $600/year. Bodyweight exercises, running, YouTube workouts, and outdoor activities are free and effective.'},
+  {t:'Automate Bill Pay', d:'Late fees average $25-35 each. Automating bill payments eliminates this entirely and protects your credit score.'},
+  {t:'The Wish List', d:'Keep a running wish list. When someone asks what you want for birthdays or holidays, you have a ready answer. Gets you things you actually want for free.'},
+  {t:'Repair Before Replace', d:'A $20 shoe resole beats a $120 new pair. A $50 phone screen repair beats a $1,000 new phone. Fix first, replace last.'},
+  {t:'Community Events', d:'Check local event calendars weekly. Free concerts, festivals, farmer\'s markets, movie nights — entertainment without the price tag.'},
+  {t:'Second-Hand Kids', d:'Children outgrow clothes in months. Buy secondhand, accept hand-me-downs, host clothing swaps. Save 70-90% vs retail.'},
+  {t:'Travel Hack', d:'Book flights on Tuesdays, use incognito mode, set price alerts. Flexible dates can save 30-50% on airfare.'},
+  {t:'The $5 Rule', d:'Every time you get a $5 bill as change, save it in a jar. Don\'t spend fives. People save $500-1,000/year with this one weird trick.'},
+  {t:'Audit Your Insurance', d:'Shop car and home insurance annually. Loyalty doesn\'t pay — switching saves $300-700/year on average. Same coverage, lower price.'},
+  {t:'Bulk Buying Strategy', d:'Only buy in bulk if you\'ll actually use it all. Costco savings evaporate if food expires or you overbuy on impulse.'},
+  {t:'Streaming Rotation', d:'Subscribe to one streaming service at a time. Binge for a month, cancel, switch to the next. You\'ll never run out of content.'},
+  {t:'Money Date Night', d:'Set a monthly "money date" to review finances with your partner. Alignment prevents fights and duplicate spending.'},
+  {t:'The Savings Rate', d:'Your savings rate matters more than your income. Someone earning $50K saving 30% builds wealth faster than $100K saving 5%.'},
+  {t:'Micro Investing', d:'Start with $5-10/week in index funds. Small consistent amounts beat waiting to invest a lump sum. Time in market > timing the market.'},
+  {t:'YNAB Philosophy', d:'Give every dollar a job, embrace your true expenses, roll with the punches, age your money. Four rules that transform budgeting.'},
+  {t:'Avoid ATM Fees', d:'ATM fees average $4.73 per withdrawal. Use your bank\'s free ATMs or get cash back at the register. Save $50-100/year.'},
+  {t:'Planned Leftovers', d:'Intentionally cook extra. Monday\'s roast chicken becomes Tuesday\'s chicken salad and Wednesday\'s soup. One protein, three meals.'},
+  {t:'The Fun Fund', d:'Save $1/day in a "fun fund" jar. By December, you have $365 for holiday gifts, a trip, or a splurge — zero guilt.'},
+  {t:'Skip the Appetizer', d:'At restaurants, skip appetizers and drinks. Order water + entree. A family of 4 saves $20-40 per meal out.'},
+  {t:'Washable Over Disposable', d:'Cloth napkins, reusable bags, rechargeable batteries. Higher upfront cost, but 10x cheaper over a year.'},
+  {t:'Credit Score = Savings', d:'A 750+ credit score saves you thousands in lower interest rates on mortgages, car loans, and credit cards. Guard it.'},
+  {t:'Gift Budget', d:'Set an annual gift budget in January and divide by 12. Save monthly so holidays and birthdays don\'t blow up your budget.'},
+  {t:'The Compound Effect', d:'$200/month invested at 8% return = $589,000 in 30 years. Start today. The best time was 10 years ago. The second best is now.'},
+  {t:'Windfall Rule', d:'Unexpected money (bonus, tax refund, gift)? Save 50%, put 30% toward debt, enjoy 20%. Don\'t let windfalls vanish into lifestyle.'},
+  {t:'Wants vs Needs List', d:'Write two columns: needs and wants. Be brutally honest. Most "needs" are actually wants in disguise.'},
+  {t:'Accountability Partner', d:'Tell someone your financial goal. People who share goals are 65% more likely to achieve them. Add weekly check-ins for 95%.'},
+  {t:'Energy Audit', d:'Many utilities offer free home energy audits. They find leaks, inefficiencies, and suggest fixes — often with rebates.'},
+  {t:'Freezer Cooking', d:'Spend one weekend making 20-30 freezer meals. Cost: ~$3/meal vs $12+ eating out. Pull one out each morning — dinner is handled.'},
+  {t:'The Subscription Stack', d:'List every subscription you pay for. Total them up monthly and annually. Most people are shocked — average is $219/month.'},
+  {t:'Cash Envelope for Groceries', d:'Take a fixed cash amount to the grocery store. When it\'s gone, put items back. Forces prioritization over impulse.'},
+  {t:'Negotiate Your Salary', d:'Not asking for a raise costs $500K-1M over a career. Research market rates, document wins, and ask annually. Worst they say is no.'},
+  {t:'The Rule of 72', d:'Divide 72 by your interest rate to find doubling time. At 8%, money doubles every 9 years. At 2%, it takes 36 years. Invest wisely.'},
+  {t:'Maintenance Saves Money', d:'Oil changes, tire rotations, HVAC filters — cheap maintenance prevents expensive repairs. $30 oil change vs $5,000 engine rebuild.'},
+  {t:'Thrift Store First', d:'Check thrift stores before retail. Name brands show up constantly at 80-90% off. Especially for kitchen items, books, and clothes.'},
+  {t:'Bring Snacks', d:'Pack snacks for road trips, errands, and work. Gas station and convenience store markups are 200-400%. A $1 granola bar costs $3.50 there.'},
+  {t:'Split Big Goals', d:'Saving $12,000 sounds impossible. Saving $1,000/month is hard. Saving $33/day is doable. Break goals into daily chunks.'},
+  {t:'Avoid Minimum Payments', d:'Paying only minimums on a $5,000 credit card balance at 20% APR takes 25 years and costs $8,000+ in interest. Pay more.'},
+  {t:'The Spending Trigger', d:'Identify your spending triggers — boredom, stress, social pressure, FOMO. Once you know the trigger, you can address it without spending.'},
+  {t:'Happy Hour Strategy', d:'If socializing out, go during happy hour. Same restaurant, same friends, 30-50% lower prices on food and drinks.'},
+  {t:'Return Stuff', d:'Buyer\'s remorse is real. Most stores have 30-90 day return policies. If you regret it, return it. Don\'t let shame cost you money.'},
+  {t:'Phone Plan Audit', d:'Switch to a prepaid or MVNO carrier (Mint, Visible, Cricket). Same networks, $25-35/month instead of $70-90. Save $500+/year.'},
+  {t:'The Pantry Challenge', d:'Once a month, eat only from your pantry and freezer for a week. Uses up food that would expire and saves $50-100 that week.'},
+  {t:'Tax-Loss Harvesting', d:'Sell losing investments to offset capital gains taxes. Immediately reinvest in similar (not identical) assets. Free tax savings.'},
+  {t:'Staycation', d:'A weekend staycation with local attractions, home cooking, and relaxation costs 90% less than traveling. Explore your own city.'},
+  {t:'The Opportunity Cost', d:'Every dollar spent is a dollar not invested. That $50 dinner, invested at 8% for 30 years, would be $503. What\'s really worth it?'},
+  {t:'Batch Cook Proteins', d:'Grill 5 lbs of chicken on Sunday. Use it all week in salads, wraps, bowls, and sandwiches. Protein is the expensive part — stretch it.'},
+  {t:'Use The Library App', d:'Libby and Hoopla let you borrow ebooks, audiobooks, and magazines free with a library card. Why pay for Audible or Kindle Unlimited?'},
+  {t:'Declutter For Cash', d:'Sell unused items on Marketplace, Poshmark, or eBay. Most homes have $1,000-3,000 in sellable items gathering dust.'},
+  {t:'Carpool Kids', d:'Alternate school/activity drives with other parents. Cuts your driving in half and frees up time. Coordinate via group chat.'},
+  {t:'Skip the Car Wash', d:'A bucket, sponge, and hose cost $5 total. A car wash is $15-30. Wash at home and save $200-400/year if you go bi-weekly.'},
+  {t:'Avoid FOMO Spending', d:'Social media makes everyone look rich. Remember: 78% of Americans live paycheck to paycheck. Don\'t go broke looking rich.'},
+  {t:'Buy Refurbished', d:'Manufacturer-refurbished electronics come with warranties and cost 20-40% less. Apple, Dell, and Samsung all have refurb stores.'},
+  {t:'Slow Cooker Magic', d:'Throw cheap ingredients in a slow cooker before work. Come home to a $3-5 meal that tastes like you spent hours cooking.'},
+  {t:'Medical Bill Negotiation', d:'Always negotiate medical bills. Ask for itemized statements, dispute errors, request payment plans, and ask about charity care.'},
+  {t:'The 100-Hour Rule', d:'Hourly wage = annual salary ÷ 2,000. If you earn $50K, your time is worth $25/hr. Is that $15 task worth 36 minutes of your life?'},
+  {t:'Avoid Brand Loyalty', d:'Companies count on loyalty to charge more. Shop around every time. Brand loyalty costs the average consumer $1,000+/year.'},
+  {t:'Planned Indulgence', d:'Budget $X for one nice thing per month. A planned splurge feels great; an unplanned one creates guilt. Same money, different feelings.'},
+  {t:'Keep Old Cars', d:'The average car payment is $700/mo. A paid-off car, even with $200/mo repairs, saves $6,000/year. Drive it till the wheels fall off.'},
+  {t:'Night Owl Shopping', d:'Grocery stores mark down bakery, deli, and produce items in the evening. Shop after 7pm for 30-50% off soon-to-expire items.'},
+  {t:'The Invisible Budget', d:'Automate: paycheck hits → auto-transfer to savings → auto-pay bills → what\'s left is spending money. No willpower required.'},
+  {t:'Learn One New Recipe', d:'Master one new cheap meal per month. After a year, you have 12 go-to budget meals. Chicken thighs, lentil soup, fried rice — all under $3/serving.'},
+  {t:'Group Insurance', d:'Check if professional associations, alumni groups, or employers offer group rates on insurance. Often 15-30% cheaper.'},
+  {t:'The Boring Middle', d:'Financial success is boring: earn, save, invest, repeat. The exciting part comes later. Embrace the boring middle years.'},
+  {t:'Cash Back Apps', d:'Use Ibotta, Fetch, and Checkout 51 on groceries you already buy. $5-15/month in cashback for scanning receipts. Passive savings.'},
+  {t:'Rent Before Buying', d:'Need a tool, costume, or equipment once? Rent it. Home Depot rents tools for $20-50 vs $200+ to buy something you\'ll use once.'},
+  {t:'Free Financial Advice', d:'Your library, community college, or local credit union likely offers free financial literacy classes and counseling.'},
+  {t:'The True Cost Formula', d:'Include maintenance, fuel, insurance, storage, and opportunity cost. That $30K boat costs $5K/year to own. Still want it?'},
+  {t:'Meal Plan Before Shopping', d:'Plan 5-7 dinners before making a grocery list. Buy only what\'s needed. Reduces food waste by 25% and spending by 15-20%.'},
+  {t:'Take Advantage of FSA', d:'Flexible Spending Accounts let you pay medical/dependent costs with pre-tax dollars. $2,000 in an FSA saves $500-700 in taxes.'},
+  {t:'Buy Nothing Groups', d:'Join your local Buy Nothing group on Facebook. People give away furniture, clothes, toys, kitchenware — all free.'},
+  {t:'Student Discounts', d:'Even years after school, some retailers honor student discounts with just an .edu email. Spotify, Apple, Amazon Prime — check first.'},
+  {t:'Sleep On Big Purchases', d:'Never make a purchase over $100 the same day you think of it. Sleep on it. The urge usually fades by morning.'},
+  {t:'Avoid Store Credit Cards', d:'That 20% welcome discount tempts you, but store cards carry 25-30% APR. One carried balance wipes out all savings.'},
+  {t:'Master the Freezer', d:'Bread, cheese, butter, meat, sauces, and even milk can be frozen. Buy in bulk on sale and freeze. Cuts grocery bills 20-30%.'},
+  {t:'Public Transit Math', d:'Car costs average $1,000/month (payment, insurance, gas, maintenance). Even $100/mo transit + occasional Uber is 80% cheaper.'},
+  {t:'The Reverse Budget', d:'Instead of tracking every expense, just automate savings first. Whatever\'s left is your spending money. Simple and effective.'},
+  {t:'Price Anchoring Trap', d:'Retailers show a high "original" price next to the "sale" price. Ignore the anchor — only compare to what you\'d actually pay elsewhere.'},
+  {t:'Grow Something', d:'Even a small herb garden saves $3-5/week on basil, cilantro, mint. A tomato plant produces $20-50 worth per season.'},
+  {t:'Warranty Stacking', d:'Your credit card may offer extended warranties, purchase protection, and return protection. Check your card benefits before buying extra coverage.'},
+  {t:'Zero-Cost Gifts', d:'Homemade gifts, handwritten letters, acts of service, photo books from free apps. The most meaningful gifts often cost nothing.'},
+  {t:'Black Friday Myth', d:'Many "deals" are inflated then discounted. Use price trackers (CamelCamelCamel, Honey) to verify it\'s actually the lowest price.'},
+  {t:'Invest Your Raise', d:'Got a 5% raise? Invest 3%, enjoy 2%. You still feel the boost but your future self gets the bigger benefit.'},
+  {t:'The Latte Alternative', d:'Invest in a good coffee maker. A $150 machine + $20/mo in beans replaces $5/day coffee habit. Saves $1,500/year.'},
+  {t:'Paper Towel Swap', d:'Switch to washable microfiber cloths. $15 for a pack vs $300+/year on paper towels. Better for cleaning and the environment.'},
+  {t:'Avoid Convenience Fees', d:'Pre-cut fruit, single-serve packets, and pre-marinated meat carry 50-200% markups. Spend 5 minutes doing it yourself.'},
+  {t:'The Gap', d:'Wealth = the gap between what you earn and what you spend. You can increase income, decrease spending, or both. Focus on widening the gap.'},
+  {t:'Impulse Buy Jar', d:'Every time you resist an impulse purchase, transfer that amount to savings. Watch your "almost spent" money stack up.'},
+  {t:'Health = Wealth', d:'Exercise, eat well, sleep 7-8 hours. Healthy people spend 50% less on healthcare over their lifetime. Your body is your best investment.'},
+  {t:'The 5-Year Test', d:'Will this purchase matter in 5 years? If yes, it might be worth it. If no, it\'s probably not. Most things fail the 5-year test.'},
+  {t:'Split Meals Out', d:'Restaurant portions are 2-3x a normal serving. Split an entree with someone or take half home. Same satisfaction, half the cost.'},
+  {t:'Auto Insurance Discounts', d:'Ask about: safe driver, multi-policy, low mileage, paperless, paid-in-full, and defensive driving course discounts. Most people qualify for 2-3.'},
+  {t:'The Money Mantra', d:'Create a personal spending mantra: "Is this aligned with my goals?" Repeat it before every purchase. Simple but surprisingly powerful.'},
+  {t:'Track Net Worth', d:'Check net worth monthly (assets minus debts). Watching it grow is more motivating than any budget. It\'s the only number that matters.'},
+  {t:'Regift Thoughtfully', d:'Received something nice you won\'t use? Pass it along to someone who will. It\'s not cheap — it\'s resourceful and prevents waste.'},
+  {t:'Showroom Then Online', d:'Try products in-store, then buy online for lower prices. Electronics, furniture, and mattresses are often 10-30% cheaper online.'},
+  {t:'Set Spending Limits', d:'Create per-category spending caps. When dining out hits $200 for the month, you cook the rest. Caps prevent category blowouts.'},
+  {t:'Dry Clean Sparingly', d:'Most "dry clean only" labels are suggestions. Many items do fine on gentle/hand wash. Save $20-50/month on dry cleaning.'},
+  {t:'Free Birthday Meals', d:'Sign up for Denny\'s, IHOP, Chili\'s, Starbucks, and other birthday clubs. Get $50-100+ in free food every year on your birthday.'},
+  {t:'The 30/30 Rule', d:'For purchases over $30, wait 30 hours. For purchases over $100, wait 30 days. Eliminates most impulse spending.'},
+  {t:'Pack Your Gym Bag', d:'Go directly from work to the gym. Skipping the trip home prevents "I\'ll just stay in" syndrome. Maximizes that gym membership.'},
+  {t:'Refinance Student Loans', d:'If your credit score has improved since graduation, refinancing can drop rates 1-3%. On $40K of loans, that saves $3,000-8,000 total.'},
+  {t:'Avoid Credit Card Interest', d:'Pay the full balance every month — no exceptions. If you can\'t afford to pay it off, you can\'t afford the purchase.'},
+  {t:'The Wealth Formula', d:'Earn → Save → Invest → Compound → Repeat. That\'s it. Every financial book is a variation of these five words.'},
+  {t:'Coupon Before Checkout', d:'Before completing any online purchase, spend 30 seconds searching "[store name] coupon code." Works about 30% of the time.'},
+  {t:'Water Heater Savings', d:'Lower your water heater to 120°F. Most are set to 140°F. Saves 6-10% on water heating costs with zero comfort difference.'},
+  {t:'Community Garden', d:'No yard? Join a community garden plot for $20-50/season. Grow $300-500 worth of produce. Therapeutic and money-saving.'},
+  {t:'Avoid Peer Pressure', d:'You don\'t have to match your friends\' spending. Suggest free or cheap alternatives. Real friends don\'t care about your budget.'},
+  {t:'The Millionaire Formula', d:'Most millionaires aren\'t flashy — they drive used cars, live below their means, and invest consistently. Wealth is invisible.'},
+  {t:'Pre-Game at Home', d:'Eat a snack or small meal before going out. You\'ll order less, drink less, and spend 30-50% less at restaurants and bars.'},
+  {t:'Annual Fee Check', d:'Is your credit card\'s annual fee worth the perks? If you\'re not earning 2-3x the fee in rewards, downgrade to a no-fee card.'},
+  {t:'The Minimalism Mindset', d:'Owning less means spending less on storage, maintenance, cleaning, and replacing. Fewer things = more money and more peace.'},
+  {t:'Bill Splitting Apps', d:'Use Splitwise or Venmo to split costs fairly with friends and roommates. No more "I\'ll get you next time" money lost.'},
+  {t:'Check Your Paycheck', d:'Review your pay stub for errors — wrong hours, missing overtime, incorrect deductions. Payroll mistakes happen and they cost you.'},
+  {t:'Shop Your Closet', d:'Before buying new clothes, "shop" your existing wardrobe. Rearrange, try new combinations. You probably own outfits you\'ve forgotten.'},
+  {t:'The Dopamine Detox', d:'Spending gives a dopamine hit. So does exercise, cooking, creating, and learning — for free. Replace spending habits with free dopamine sources.'},
+  {t:'Ceiling Fan Direction', d:'Counter-clockwise in summer pushes cool air down, clockwise in winter circulates warm air. Saves 10-15% on heating and cooling.'},
+  {t:'Delayed Gratification', d:'The ability to delay gratification is the #1 predictor of financial success. Practice it like a muscle — it gets stronger.'},
+  {t:'Prescription Savings', d:'Use GoodRx or Cost Plus Drugs to compare pharmacy prices. Same medication can vary $20-200 between pharmacies in the same city.'},
+  {t:'Invest in Skills', d:'Free courses on YouTube, Khan Academy, and Coursera can boost your earning power. A $0 investment in skills pays dividends forever.'},
+  {t:'Avoid Upsells', d:'"Would you like to make that a large?" costs you $1-3 every time. Default to the smallest size. You\'ll rarely miss the difference.'},
+  {t:'The Sunday Reset', d:'Spend 30 minutes every Sunday reviewing your week\'s spending, planning meals, and setting the budget for the week ahead.'},
+  {t:'Cancel Free Trials', d:'Set a phone reminder 2 days before any free trial ends. Companies bank on you forgetting — and auto-charging your card.'},
+  {t:'Park Further Away', d:'Park in free spots and walk. Saves $10-20/day in city parking. Also gets you steps and avoids door dings. Triple win.'},
+  {t:'Cash Is King', d:'Keep $100-200 in cash for emergencies: power outages, card reader failures, cash-only vendors. But not so much that you spend it casually.'},
+  {t:'Invest In A Good Mattress', d:'You spend 1/3 of your life sleeping. A $1,000 mattress over 10 years = $0.27/night. Better sleep = better health = lower medical costs.'},
+  {t:'Barter When Possible', d:'Trade skills instead of paying: cut a neighbor\'s lawn for a haircut, babysit in exchange for car repairs. Everyone wins.'},
+  {t:'First-Generation Wealth', d:'80% of millionaires are first-generation rich. They didn\'t inherit it — they earned and saved it. If they can, you can.'},
+  {t:'Pay With Time', d:'Convert prices to hours worked. That $80 shirt at $20/hr = 4 hours of your life. Would you work 4 hours just for that shirt?'},
+];
+
+function getDailyTip() {
+  const today = new Date().toISOString().split('T')[0];
+  const saved = JSON.parse(localStorage.getItem('rc_daily_tip') || '{}');
+  if (saved.date === today) return TIPS[saved.idx];
+  // Pick a new tip, avoid recent ones
+  const history = JSON.parse(localStorage.getItem('rc_tip_history') || '[]');
+  const pool = [];
+  for (let i = 0; i < TIPS.length; i++) {
+    if (!history.includes(i)) pool.push(i);
+  }
+  if (pool.length === 0) {
+    // Reset history, keep last 10
+    history.length = 0;
+    localStorage.setItem('rc_tip_history', '[]');
+    for (let i = 0; i < TIPS.length; i++) pool.push(i);
+  }
+  const idx = pool[Math.floor(Math.random() * pool.length)];
+  history.push(idx);
+  // Keep history manageable
+  if (history.length > 100) history.splice(0, history.length - 100);
+  localStorage.setItem('rc_tip_history', JSON.stringify(history));
+  localStorage.setItem('rc_daily_tip', JSON.stringify({date: today, idx}));
+  return TIPS[idx];
+}
+
+function renderTips() {
+  const tip = getDailyTip();
+  const num = JSON.parse(localStorage.getItem('rc_daily_tip') || '{}').idx + 1;
+  let html = '<div class="tips-section">';
+  html += '<div class="cat-title">Daily Tip</div>';
+  html += `<div class="tip-card"><div class="tip-title">${tip.t}</div><div class="tip-text">${tip.d}</div></div>`;
+  html += '</div>';
+  document.getElementById('tipsSection').innerHTML = html;
 }
 
 // ===== RENDER AVERAGES =====

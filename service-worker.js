@@ -1,10 +1,11 @@
-const CACHE_NAME = 'chariots-v7';
+const CACHE_NAME = 'chariots-v14';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './logo.png'
 ];
 
 self.addEventListener('install', e => {
