@@ -461,13 +461,21 @@ a{text-decoration:none;color:inherit}
 .inv-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);font-weight:600}
 .inv-value{font-size:1.2rem;font-weight:700;margin-top:4px;font-family:'Playfair Display',serif;color:var(--text-bright)}
 .inv-sub{font-size:.65rem;color:var(--text-dim);margin-top:2px}
-.inv-month-item{
+.inv-entry{
   display:flex;justify-content:space-between;align-items:center;
   padding:10px 12px;background:var(--card);border:1px solid var(--card-border);
   border-radius:var(--radius-sm);box-shadow:var(--card-shadow);margin-bottom:4px;
+  cursor:pointer;
 }
-.inv-month-label{font-size:.78rem;font-weight:500;color:var(--text)}
-.inv-month-amount{font-size:.82rem;font-weight:700;color:var(--text-bright)}
+.inv-entry-left{display:flex;flex-direction:column;gap:2px}
+.inv-entry-amount{font-size:.88rem;font-weight:700;color:var(--text-bright)}
+.inv-entry-date{font-size:.68rem;color:var(--text-dim)}
+.inv-delete-btn{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--rose-soft);color:var(--rose);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:700;border:none;cursor:pointer;
+}
 .inv-add-row{
   display:flex;gap:8px;margin-bottom:16px;
 }
@@ -1432,21 +1440,21 @@ function renderInvested() {
   </div>`;
   document.getElementById('invSummary').innerHTML = html;
 
-  // History by month
-  const byMonth = {};
-  for (const inv of data.investments) {
-    const k = inv.date.substring(0, 7);
-    byMonth[k] = (byMonth[k] || 0) + inv.amount;
-  }
-  const sortedMonths = Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0]));
+  // History — individual entries, sorted newest first
+  const sorted = [...data.investments].sort((a, b) => b.date.localeCompare(a.date));
   let histHTML = '<div class="cat-title" style="margin:12px 0 8px">History</div>';
-  if (sortedMonths.length === 0) {
+  if (sorted.length === 0) {
     histHTML += '<div class="tx-empty">No investments logged yet</div>';
   } else {
-    for (const [m, amt] of sortedMonths) {
-      histHTML += `<div class="inv-month-item">
-        <span class="inv-month-label">${getMonthLabel(m)}</span>
-        <span class="inv-month-amount">${fmt(amt)}</span>
+    for (const inv of sorted) {
+      const d = new Date(inv.date + 'T12:00:00');
+      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      histHTML += `<div class="inv-entry" onclick="editInvestment('${inv.id}')">
+        <div class="inv-entry-left">
+          <span class="inv-entry-amount">${fmt(inv.amount)}</span>
+          <span class="inv-entry-date">${label}</span>
+        </div>
+        <button class="inv-delete-btn" onclick="event.stopPropagation();deleteInvestment('${inv.id}')">&#10005;</button>
       </div>`;
     }
   }
@@ -1466,6 +1474,29 @@ function addInvestment() {
   input.value = '';
   saveData();
   toast(`${fmt(amount)} invested`);
+  renderInvested();
+}
+
+function deleteInvestment(id) {
+  const inv = data.investments.find(i => i.id === id);
+  if (!inv) return;
+  if (!confirm('Delete ' + fmt(inv.amount) + ' investment?')) return;
+  data.investments = data.investments.filter(i => i.id !== id);
+  saveData();
+  toast('Deleted');
+  renderInvested();
+}
+
+function editInvestment(id) {
+  const inv = data.investments.find(i => i.id === id);
+  if (!inv) return;
+  const newAmt = prompt('Edit amount:', inv.amount);
+  if (newAmt === null) return;
+  const parsed = parseFloat(newAmt);
+  if (!parsed || parsed <= 0) { toast('Invalid amount'); return; }
+  inv.amount = parsed;
+  saveData();
+  toast('Updated to ' + fmt(parsed));
   renderInvested();
 }
 
