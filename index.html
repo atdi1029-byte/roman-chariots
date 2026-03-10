@@ -685,7 +685,18 @@ const KEYWORDS = {
     'chinese','mexican','thai','indian','italian','panda express','chick-fil-a','popeyes','sonic',
     'arby','five guys','in-n-out','shake shack','panera','chipotle','wingstop','buffalo wild wings',
     'ihop','denny','waffle house','cracker barrel','olive garden','applebee','chili','outback',
-    'red lobster','longhorn','texas roadhouse','cook','takeout','take out','delivery'],
+    'red lobster','longhorn','texas roadhouse','cook','takeout','take out','delivery',
+    'chicken','beef','pork','steak','sausage','bacon','ham','turkey','fish','salmon','shrimp','tuna',
+    'egg','eggs','milk','cheese','butter','yogurt','cream','bread','rice','pasta','noodle','cereal',
+    'oat','flour','sugar','salt','pepper','oil','vinegar','sauce','ketchup','mustard','mayo',
+    'apple','banana','orange','grape','berry','strawberry','blueberry','lemon','lime','mango',
+    'tomato','potato','onion','garlic','lettuce','spinach','broccoli','carrot','corn','bean',
+    'pepper','cucumber','avocado','mushroom','celery','cabbage','pea','squash',
+    'juice','water','soda','tea','drink','beverage',
+    'candy','candies','chocolate','cookie','cookies','cake','pie','ice cream','biscuit','biscuits',
+    'chip','chips','crackers','pretzel','popcorn','nuts','peanut','almond',
+    'cottage cheese','cream cheese','sour cream','whipped cream','dressing',
+    'frozen','canned','organic','produce','meat','seafood','fruit','vegetable'],
   transport: ['gas','shell','chevron','exxon','bp','mobil','marathon','sunoco','speedway','wawa',
     'fuel','gasoline','uber','lyft','taxi','cab','parking','toll','car wash','carwash','oil change',
     'mechanic','tire','auto','vehicle','bus','train','metro','transit','fare'],
@@ -1959,7 +1970,7 @@ function handleScanFile(input) {
   document.getElementById('scanStatus').textContent = 'Resizing image...';
 
   // Resize and convert to base64
-  resizeImage(file, 1200, function(base64) {
+  resizeImage(file, 800, function(base64) {
     document.getElementById('scanStatus').textContent = 'Reading receipt...';
     sendScanToBackend(base64);
   });
