@@ -155,25 +155,6 @@ a{text-decoration:none;color:inherit}
 }
 .tip-card .tip-text{color:var(--text)}
 
-/* ===== AVERAGES ===== */
-.avg-section{margin-bottom:16px}
-.avg-tabs{display:flex;gap:0;margin-bottom:10px;background:var(--bg-warm);border-radius:8px;padding:3px}
-.avg-tab{
-  flex:1;text-align:center;font-size:.68rem;font-weight:600;
-  padding:6px 4px;border-radius:6px;color:var(--text-dim);
-  transition:all .2s;
-}
-.avg-tab.active{background:var(--card);color:var(--sky-deep);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
-.avg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.avg-card{
-  background:var(--card);border:1px solid var(--card-border);
-  border-radius:var(--radius-sm);padding:10px 12px;
-  box-shadow:var(--card-shadow);
-}
-.avg-card-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);font-weight:600}
-.avg-card-value{font-size:1.1rem;font-weight:700;margin-top:2px}
-.avg-card-value.income{color:var(--text-bright)}
-.avg-card-value.expense{color:var(--text-bright)}
 
 /* ===== TRANSACTIONS LIST ===== */
 .tx-section{}
@@ -532,7 +513,6 @@ a{text-decoration:none;color:inherit}
     <div class="summary" id="summaryCards"></div>
     <div class="cat-section" id="catBreakdown"></div>
     <div id="insightCards"></div>
-    <div class="avg-section" id="avgSection"></div>
     <div id="tipsSection"></div>
   </div>
 
@@ -679,18 +659,19 @@ const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+const SVG = (d) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block">${d}</svg>`;
 const DEFAULT_CATEGORIES = {
-  groceries:      {label:'Groceries',     color:'#c8884a', icon:'\u{1F6D2}'},
-  eatingout:      {label:'Eating Out',    color:'#d4874a', icon:'\u{1F354}'},
-  transport:      {label:'Transport',     color:'#52b4c8', icon:'\u{1F697}'},
-  bills:          {label:'Bills',         color:'#8878b0', icon:'\u{1F4CB}'},
-  subscriptions:  {label:'Subscriptions', color:'#c08898', icon:'\u{1F4F1}'},
-  shopping:       {label:'Shopping',      color:'#d0a840', icon:'\u{1F6CD}'},
-  health:         {label:'Health',        color:'#4a8a7a', icon:'\u{1FA7A}'},
-  entertainment:  {label:'Entertainment', color:'#c89090', icon:'\u{1F3AC}'},
-  pay:            {label:'Pay',           color:'#5aa088', icon:'\u{1F4B0}'},
-  tips:           {label:'Tips',          color:'#6ab898', icon:'\u{1F4B5}'},
-  other:          {label:'Other',         color:'#9a8e78', icon:'\u{1F4CC}'}
+  groceries:      {label:'Groceries',     color:'#c8884a', icon:SVG('<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>')},
+  eatingout:      {label:'Eating Out',    color:'#d4874a', icon:SVG('<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>')},
+  transport:      {label:'Transport',     color:'#52b4c8', icon:SVG('<path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>')},
+  bills:          {label:'Bills',         color:'#8878b0', icon:SVG('<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h2"/>')},
+  subscriptions:  {label:'Subscriptions', color:'#c08898', icon:SVG('<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/>')},
+  shopping:       {label:'Shopping',      color:'#d0a840', icon:SVG('<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/>')},
+  health:         {label:'Health',        color:'#4a8a7a', icon:SVG('<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>')},
+  entertainment:  {label:'Entertainment', color:'#c89090', icon:SVG('<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>')},
+  pay:            {label:'Pay',           color:'#5aa088', icon:SVG('<path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 100 4 2 2 0 000-4z"/>')},
+  tips:           {label:'Tips',          color:'#6ab898', icon:SVG('<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>')},
+  other:          {label:'Other',         color:'#9a8e78', icon:SVG('<path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>')}
 };
 let CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
 
@@ -1026,9 +1007,6 @@ function renderDashboard() {
   // Smart insights
   renderSmartInsights(mk);
 
-  // Averages
-  renderAverages();
-
   // Tips (only on first render, not on every re-render)
   if (!document.getElementById('tipsSection').innerHTML) renderTips();
 }
@@ -1049,7 +1027,7 @@ function renderSmartInsights(mk) {
     const diff = currentExpense - expectedPace;
     if (Math.abs(diff) > 20) {
       const direction = diff > 0 ? 'ahead of' : 'behind';
-      const emoji = diff > 0 ? '\u26A0\uFE0F' : '\u2705';
+      const emoji = diff > 0 ? SVG('<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>') : SVG('<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>');
       insights.push(`${emoji} You've spent ${fmt(currentExpense)} by day ${dayOfMonth}. Your 3-month pace would be ${fmt(expectedPace)} \u2014 you're ${direction} pace by ${fmt(Math.abs(diff))}.`);
     }
   }
@@ -1057,7 +1035,7 @@ function renderSmartInsights(mk) {
   // Recurring total
   const recTotal = data.recurring.filter(r => r.active && r.type === 'expense').reduce((s, r) => s + r.amount, 0);
   if (recTotal > 0) {
-    insights.push(`\u{1F501} You have ${fmt(recTotal)} in monthly recurring expenses (${data.recurring.filter(r => r.active && r.type === 'expense').length} items).`);
+    insights.push(`${SVG('<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>')} You have ${fmt(recTotal)} in monthly recurring expenses (${data.recurring.filter(r => r.active && r.type === 'expense').length} items).`);
   }
 
   // Pattern insights — spending habit observations
@@ -1068,13 +1046,13 @@ function renderSmartInsights(mk) {
     const dayPct = p.dayDistribution[maxDay] / p.count;
     if (dayPct > 0.4) {
       const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][maxDay];
-      insights.push(`\u{1F4C5} You usually ${key} on ${dayName}s (~${fmt(p.avgAmount)}).`);
+      insights.push(`${SVG('<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>')} You usually ${key} on ${dayName}s (~${fmt(p.avgAmount)}).`);
     }
     // Frequency pattern
     if (p.avgGapDays > 0 && p.avgGapDays < 35) {
       const gap = Math.round(p.avgGapDays);
-      if (gap <= 7) insights.push(`\u{1F504} You ${key} about every ${gap} day${gap !== 1 ? 's' : ''} (~${fmt(p.avgAmount)} each time).`);
-      else if (gap <= 14) insights.push(`\u{1F504} You ${key} roughly every ${gap} days (~${fmt(p.avgAmount)}).`);
+      if (gap <= 7) insights.push(`${SVG('<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/>')} You ${key} about every ${gap} day${gap !== 1 ? 's' : ''} (~${fmt(p.avgAmount)} each time).`);
+      else if (gap <= 14) insights.push(`${SVG('<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/>')} You ${key} roughly every ${gap} days (~${fmt(p.avgAmount)}).`);
     }
   }
 
@@ -1100,7 +1078,7 @@ function renderSmartInsights(mk) {
         const diff = ((amt - catAvgs[cat]) / catAvgs[cat] * 100).toFixed(0);
         if (diff > 20) {
           const info = CATEGORIES[cat] || CATEGORIES.other;
-          insights.push(`\u{1F4C8} ${info.label} spending is ${diff}% higher than your 3-month average.`);
+          insights.push(`${SVG('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>')} ${info.label} spending is ${diff}% higher than your 3-month average.`);
         }
       }
     }
@@ -1348,36 +1326,6 @@ function renderTips() {
   html += `<div class="tip-card"><div class="tip-title">${tip.t}</div><div class="tip-text">${tip.d}</div></div>`;
   html += '</div>';
   document.getElementById('tipsSection').innerHTML = html;
-}
-
-// ===== RENDER AVERAGES =====
-let avgPeriod = '3mo';
-function renderAverages() {
-  const periods = { '3mo': 3, '6mo': 6, '1yr': 12, 'All': 0 };
-  let tabsHTML = '<div class="avg-tabs">';
-  for (const p of Object.keys(periods)) {
-    tabsHTML += `<div class="avg-tab${p === avgPeriod ? ' active' : ''}" onclick="setAvgPeriod('${p}')">${p}</div>`;
-  }
-  tabsHTML += '</div>';
-
-  const avg = avgPeriod === 'All' ? getAllTimeAverages() : getAverages(periods[avgPeriod]);
-  const gridHTML = `<div class="avg-grid">
-    <div class="avg-card">
-      <div class="avg-card-label">Avg Income/mo</div>
-      <div class="avg-card-value income">${fmt(avg.income)}</div>
-    </div>
-    <div class="avg-card">
-      <div class="avg-card-label">Avg Spending/mo</div>
-      <div class="avg-card-value expense">${fmt(avg.expense)}</div>
-    </div>
-  </div>`;
-
-  document.getElementById('avgSection').innerHTML = tabsHTML + gridHTML;
-}
-
-function setAvgPeriod(p) {
-  avgPeriod = p;
-  renderAverages();
 }
 
 // ===== RENDER TRANSACTIONS =====
@@ -1821,7 +1769,14 @@ function renderSettings() {
       <div class="setting-title">Categories</div>
       <div id="catManager"></div>
       <div style="display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap">
-        <input type="text" id="newCatEmoji" placeholder="\u{1F431}" maxlength="2" style="width:40px;padding:8px;text-align:center;border-radius:var(--radius-sm);background:var(--input-bg);border:1px solid var(--card-border);font-size:1rem">
+        <select id="newCatEmoji" style="width:48px;padding:6px 4px;border-radius:var(--radius-sm);background:var(--input-bg);border:1px solid var(--card-border);color:var(--text);font-size:.75rem;text-align:center">
+          <option value="star">\u2605 Star</option>
+          <option value="bolt">\u26A1 Bolt</option>
+          <option value="gem">\u25C6 Gem</option>
+          <option value="flag">\u2691 Flag</option>
+          <option value="gear">\u2699 Gear</option>
+          <option value="pin" selected>\u25CB Pin</option>
+        </select>
         <input type="text" id="newCatName" placeholder="Category name" style="flex:1;min-width:100px;padding:8px 12px;border-radius:var(--radius-sm);background:var(--input-bg);border:1px solid var(--card-border);color:var(--text);font-size:.82rem">
         <input type="color" id="newCatColor" value="#c8884a" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);cursor:pointer">
         <button class="btn btn-gold" onclick="addCustomCategory()" style="padding:6px 14px">Add</button>
@@ -1888,8 +1843,17 @@ function renderCatManager() {
   el.innerHTML = html;
 }
 
+const CUSTOM_ICONS = {
+  star: SVG('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
+  bolt: SVG('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
+  gem: SVG('<polygon points="12 2 2 10 12 22 22 10 12 2"/><line x1="2" y1="10" x2="22" y2="10"/>'),
+  flag: SVG('<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>'),
+  gear: SVG('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.6.77 1.02 1.36 1.1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>'),
+  pin: SVG('<path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>')
+};
 function addCustomCategory() {
-  const emoji = document.getElementById('newCatEmoji').value.trim() || '\u{1F4CC}';
+  const iconKey = document.getElementById('newCatEmoji').value || 'pin';
+  const emoji = CUSTOM_ICONS[iconKey] || CUSTOM_ICONS.pin;
   const name = document.getElementById('newCatName').value.trim();
   const color = document.getElementById('newCatColor').value;
   if (!name) { toast('Enter a category name'); return; }
@@ -1901,7 +1865,7 @@ function addCustomCategory() {
   data.settings.customCategories[key] = { label: name, color: color, icon: emoji };
   CATEGORIES[key] = { label: name, color: color, icon: emoji };
   saveData();
-  document.getElementById('newCatEmoji').value = '';
+  document.getElementById('newCatEmoji').value = 'pin';
   document.getElementById('newCatName').value = '';
   renderCatManager();
   toast(name + ' category added');
@@ -2414,7 +2378,7 @@ function renderReviewItems() {
     const info = CATEGORIES[item.category] || CATEGORIES.other;
     if (item.checked) checkedTotal += item.price;
     html += `<div class="review-item${item.checked ? '' : ' unchecked'}" onclick="toggleReviewItem(${item.idx})">
-      <div class="review-check${item.checked ? ' checked' : ''}">${item.checked ? '\u2713' : ''}</div>
+      <div class="review-check${item.checked ? ' checked' : ''}">${item.checked ? SVG('<polyline points="20 6 9 17 4 12"/>') : ''}</div>
       <div class="review-item-body">
         <div class="review-item-name">${esc(titleCase(item.name))}</div>
         <div class="review-item-cat">${info.icon} ${info.label}</div>
@@ -2578,10 +2542,96 @@ function seedNov2025() {
   localStorage.setItem('rc_seeded_nov2025', '1');
   console.log('Seeded ' + added + ' Nov 2025 transactions');
 }
+function seedDec2025() {
+  if (localStorage.getItem('rc_seeded_dec2025')) return;
+  const txs = [
+    {text:'General',amount:32,type:'expense',category:'other',date:'2025-12-01',dayOfWeek:1},
+    {text:'Cat Stuff',amount:36,type:'expense',category:'shopping',date:'2025-12-01',dayOfWeek:1},
+    {text:'Grocery',amount:12,type:'expense',category:'groceries',date:'2025-12-02',dayOfWeek:2},
+    {text:'Fuel',amount:29,type:'expense',category:'transport',date:'2025-12-03',dayOfWeek:3},
+    {text:'Grocery',amount:26,type:'expense',category:'groceries',date:'2025-12-04',dayOfWeek:4},
+    {text:'Grocery',amount:6,type:'expense',category:'groceries',date:'2025-12-05',dayOfWeek:5},
+    {text:'Fuel',amount:34,type:'expense',category:'transport',date:'2025-12-07',dayOfWeek:0},
+    {text:'Salary',amount:320,type:'income',category:'pay',date:'2025-12-08',dayOfWeek:1},
+    {text:'Grocery',amount:27,type:'expense',category:'groceries',date:'2025-12-08',dayOfWeek:1},
+    {text:'Salary',amount:800,type:'income',category:'pay',date:'2025-12-09',dayOfWeek:2},
+    {text:'Salary',amount:32,type:'income',category:'pay',date:'2025-12-09',dayOfWeek:2},
+    {text:'Grocery',amount:11,type:'expense',category:'groceries',date:'2025-12-09',dayOfWeek:2},
+    {text:'Clothes',amount:30,type:'expense',category:'shopping',date:'2025-12-09',dayOfWeek:2},
+    {text:'Fuel',amount:29,type:'expense',category:'transport',date:'2025-12-11',dayOfWeek:4},
+    {text:'Grocery',amount:12,type:'expense',category:'groceries',date:'2025-12-11',dayOfWeek:4},
+    {text:'Grocery',amount:21,type:'expense',category:'groceries',date:'2025-12-12',dayOfWeek:5},
+    {text:'Insurance',amount:166,type:'expense',category:'bills',date:'2025-12-12',dayOfWeek:5},
+    {text:'Grocery',amount:15,type:'expense',category:'groceries',date:'2025-12-13',dayOfWeek:6},
+    {text:'Salary',amount:30,type:'income',category:'pay',date:'2025-12-14',dayOfWeek:0},
+    {text:'Fuel',amount:25,type:'expense',category:'transport',date:'2025-12-14',dayOfWeek:0},
+    {text:'Pharmacy Stuff',amount:37,type:'expense',category:'health',date:'2025-12-15',dayOfWeek:1},
+    {text:'Grocery',amount:29,type:'expense',category:'groceries',date:'2025-12-16',dayOfWeek:2},
+    {text:'Salary',amount:250,type:'income',category:'pay',date:'2025-12-16',dayOfWeek:2},
+    {text:'Fuel',amount:25,type:'expense',category:'transport',date:'2025-12-18',dayOfWeek:4},
+    {text:'Grocery',amount:18,type:'expense',category:'groceries',date:'2025-12-19',dayOfWeek:5},
+    {text:'Salary',amount:156,type:'income',category:'pay',date:'2025-12-20',dayOfWeek:6},
+    {text:'Salary',amount:350,type:'income',category:'pay',date:'2025-12-20',dayOfWeek:6},
+    {text:'Salary',amount:275,type:'income',category:'pay',date:'2025-12-20',dayOfWeek:6},
+    {text:'Salary',amount:10,type:'income',category:'pay',date:'2025-12-20',dayOfWeek:6},
+    {text:'Grocery',amount:27,type:'expense',category:'groceries',date:'2025-12-20',dayOfWeek:6},
+    {text:'YMCA Membership',amount:28,type:'expense',category:'health',date:'2025-12-20',dayOfWeek:6},
+    {text:'Grocery',amount:29,type:'expense',category:'groceries',date:'2025-12-21',dayOfWeek:0},
+    {text:'Fuel',amount:27,type:'expense',category:'transport',date:'2025-12-21',dayOfWeek:0},
+    {text:'Car Things',amount:164,type:'expense',category:'transport',date:'2025-12-22',dayOfWeek:1},
+    {text:'Pharmacy Stuff',amount:78,type:'expense',category:'health',date:'2025-12-23',dayOfWeek:2},
+    {text:'Fuel',amount:32,type:'expense',category:'transport',date:'2025-12-23',dayOfWeek:2},
+    {text:'Salary',amount:357,type:'income',category:'pay',date:'2025-12-24',dayOfWeek:3},
+    {text:'Salary',amount:20,type:'income',category:'pay',date:'2025-12-24',dayOfWeek:3},
+    {text:'Grocery',amount:27,type:'expense',category:'groceries',date:'2025-12-24',dayOfWeek:3},
+    {text:'Fuel',amount:28,type:'expense',category:'transport',date:'2025-12-25',dayOfWeek:4},
+    {text:'Car Things',amount:2.50,type:'expense',category:'transport',date:'2025-12-25',dayOfWeek:4},
+    {text:'Entertainment',amount:108,type:'expense',category:'entertainment',date:'2025-12-26',dayOfWeek:5},
+    {text:'Eating Out',amount:9,type:'expense',category:'groceries',date:'2025-12-26',dayOfWeek:5},
+    {text:'Grocery',amount:37,type:'expense',category:'groceries',date:'2025-12-26',dayOfWeek:5},
+    {text:'Eating Out',amount:14,type:'expense',category:'groceries',date:'2025-12-26',dayOfWeek:5},
+    {text:'Cell Phone',amount:88,type:'expense',category:'bills',date:'2025-12-26',dayOfWeek:5},
+    {text:'Eating Out',amount:8,type:'expense',category:'groceries',date:'2025-12-27',dayOfWeek:6},
+    {text:'Salary',amount:425,type:'income',category:'pay',date:'2025-12-27',dayOfWeek:6},
+    {text:'Grocery',amount:6,type:'expense',category:'groceries',date:'2025-12-27',dayOfWeek:6},
+    {text:'Pharmacy Stuff',amount:32,type:'expense',category:'health',date:'2025-12-29',dayOfWeek:1},
+    {text:'Fuel',amount:28,type:'expense',category:'transport',date:'2025-12-29',dayOfWeek:1},
+    {text:'Grocery',amount:5,type:'expense',category:'groceries',date:'2025-12-29',dayOfWeek:1},
+    {text:'Toll',amount:17.10,type:'expense',category:'transport',date:'2025-12-30',dayOfWeek:2},
+    {text:'Salary',amount:89,type:'income',category:'pay',date:'2025-12-30',dayOfWeek:2},
+    {text:'Grocery',amount:30,type:'expense',category:'groceries',date:'2025-12-31',dayOfWeek:3}
+  ];
+  if (!data.transactions) data.transactions = [];
+  const existingDates = new Set(data.transactions.map(t => t.date + '|' + t.text + '|' + t.amount));
+  let added = 0;
+  txs.forEach((t, i) => {
+    const key = t.date + '|' + t.text + '|' + t.amount;
+    if (existingDates.has(key)) return;
+    data.transactions.push({
+      id: 'tx_seed_dec_' + i,
+      text: t.text,
+      amount: t.amount,
+      type: t.type,
+      category: t.category,
+      date: t.date,
+      time: '12:00',
+      dayOfWeek: t.dayOfWeek,
+      recurring: false,
+      notes: ''
+    });
+    added++;
+  });
+  if (added > 0) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+  localStorage.setItem('rc_seeded_dec2025', '1');
+  console.log('Seeded ' + added + ' Dec 2025 transactions');
+}
 
 // ===== INIT =====
 loadData();
 seedNov2025();
+seedDec2025();
 loadCustomCategories();
 viewMonth = new Date();
 renderAll();
