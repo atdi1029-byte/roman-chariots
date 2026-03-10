@@ -307,6 +307,75 @@ a{text-decoration:none;color:inherit}
   z-index:101;transition:transform .15s;
 }
 .fab:active{transform:scale(0.92)}
+.fab-scan{
+  position:fixed;bottom:132px;right:24px;
+  width:42px;height:42px;border-radius:50%;
+  background:linear-gradient(135deg,var(--gold),var(--terracotta));
+  color:#fff;font-size:1.1rem;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 12px rgba(208,168,64,0.35);
+  z-index:101;transition:transform .15s;
+}
+.fab-scan:active{transform:scale(0.92)}
+
+/* ===== SCAN LOADING OVERLAY ===== */
+.scan-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.5);z-index:300;
+  display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:16px;
+}
+.scan-overlay.show{display:flex}
+.scan-spinner{
+  width:48px;height:48px;border-radius:50%;
+  border:3px solid rgba(255,255,255,0.2);border-top-color:#fff;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scan-status{color:#fff;font-size:.85rem;font-weight:500;text-align:center}
+
+/* ===== RECEIPT REVIEW MODAL ===== */
+.review-modal{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:var(--bg);z-index:250;
+  transform:translateY(100%);transition:transform .3s ease;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.review-modal.show{transform:translateY(0)}
+.review-header{
+  position:sticky;top:0;background:var(--bg);
+  padding:calc(env(safe-area-inset-top,8px) + 12px) 16px 10px;
+  border-bottom:1px solid var(--card-border);z-index:1;
+}
+.review-title{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--text-bright)}
+.review-store{font-size:.75rem;color:var(--text-dim);margin-top:2px}
+.review-items{padding:12px 16px calc(env(safe-area-inset-bottom,8px) + 80px)}
+.review-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;background:var(--card);
+  border:1px solid var(--card-border);border-radius:var(--radius-sm);
+  box-shadow:var(--card-shadow);margin-bottom:4px;
+}
+.review-item.unchecked{opacity:0.4}
+.review-check{width:20px;height:20px;border-radius:4px;border:2px solid var(--card-border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--sky)}
+.review-check.checked{background:var(--sky-soft);border-color:var(--sky)}
+.review-item-body{flex:1;min-width:0}
+.review-item-name{font-size:.82rem;font-weight:500;color:var(--text-bright)}
+.review-item-cat{font-size:.6rem;color:var(--text-dim);margin-top:1px}
+.review-item-price{font-size:.85rem;font-weight:700;color:var(--text-bright);flex-shrink:0}
+.review-footer{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--bg);border-top:1px solid var(--card-border);
+  padding:12px 16px calc(env(safe-area-inset-bottom,8px) + 12px);
+  display:flex;gap:10px;z-index:251;
+}
+.review-footer .btn{flex:1;padding:12px;text-align:center}
+.review-total{
+  display:flex;justify-content:space-between;padding:10px 12px;
+  background:var(--gold-soft);border-radius:var(--radius-sm);margin-bottom:8px;
+}
+.review-total-label{font-size:.75rem;font-weight:600;color:var(--gold)}
+.review-total-value{font-size:.85rem;font-weight:700;color:var(--gold)}
 
 /* ===== ADD MODAL ===== */
 .modal-overlay{
@@ -481,7 +550,32 @@ a{text-decoration:none;color:inherit}
 </div>
 
 <!-- FAB -->
+<button class="fab-scan" onclick="startScan()">&#128247;</button>
 <button class="fab" onclick="openAddModal()">+</button>
+<input type="file" id="scanInput" accept="image/*" capture="environment" style="display:none" onchange="handleScanFile(this)">
+
+<!-- SCAN LOADING OVERLAY -->
+<div class="scan-overlay" id="scanOverlay">
+  <div class="scan-spinner"></div>
+  <div class="scan-status" id="scanStatus">Reading receipt...</div>
+</div>
+
+<!-- RECEIPT REVIEW MODAL -->
+<div class="review-modal" id="reviewModal">
+  <div class="review-header">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="review-title">Receipt Items</div>
+        <div class="review-store" id="reviewStore"></div>
+      </div>
+      <button class="btn btn-outline" onclick="closeReview()" style="padding:6px 12px;font-size:.72rem">Cancel</button>
+    </div>
+  </div>
+  <div class="review-items" id="reviewItems"></div>
+  <div class="review-footer">
+    <button class="btn btn-gold" id="btnAddAll" onclick="addAllReviewItems()">Add All</button>
+  </div>
+</div>
 
 <!-- BOTTOM NAV -->
 <nav class="nav">
@@ -556,7 +650,7 @@ const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-const CATEGORIES = {
+const DEFAULT_CATEGORIES = {
   food:           {label:'Food',          color:'#c8884a', icon:'\u{1F354}'},
   transport:      {label:'Transport',     color:'#52b4c8', icon:'\u{1F697}'},
   bills:          {label:'Bills',         color:'#8878b0', icon:'\u{1F4CB}'},
@@ -567,6 +661,20 @@ const CATEGORIES = {
   income:         {label:'Income',        color:'#5aa088', icon:'\u{1F4B0}'},
   other:          {label:'Other',         color:'#9a8e78', icon:'\u{1F4CC}'}
 };
+let CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
+
+function loadCustomCategories() {
+  if (data && data.settings && data.settings.customCategories) {
+    for (const [key, val] of Object.entries(data.settings.customCategories)) {
+      CATEGORIES[key] = val;
+    }
+  }
+  if (data && data.settings && data.settings.hiddenCategories) {
+    for (const key of data.settings.hiddenCategories) {
+      delete CATEGORIES[key];
+    }
+  }
+}
 
 // Auto-categorization keywords
 const KEYWORDS = {
@@ -1408,6 +1516,16 @@ function renderSettings() {
       ${recHTML || '<div style="font-size:.78rem;color:var(--text-dim)">No recurring items yet. Mark a transaction as recurring when adding it.</div>'}
     </div>
     <div class="setting-group">
+      <div class="setting-title">Categories</div>
+      <div id="catManager"></div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap">
+        <input type="text" id="newCatEmoji" placeholder="\u{1F431}" maxlength="2" style="width:40px;padding:8px;text-align:center;border-radius:var(--radius-sm);background:var(--input-bg);border:1px solid var(--card-border);font-size:1rem">
+        <input type="text" id="newCatName" placeholder="Category name" style="flex:1;min-width:100px;padding:8px 12px;border-radius:var(--radius-sm);background:var(--input-bg);border:1px solid var(--card-border);color:var(--text);font-size:.82rem">
+        <input type="color" id="newCatColor" value="#c8884a" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);cursor:pointer">
+        <button class="btn btn-gold" onclick="addCustomCategory()" style="padding:6px 14px">Add</button>
+      </div>
+    </div>
+    <div class="setting-group">
       <div class="setting-title">Cloud Sync</div>
       <div class="setting-row">
         <div class="setting-label">Apps Script URL</div>
@@ -1433,6 +1551,7 @@ function renderSettings() {
       </div>
     </div>
   `;
+  renderCatManager();
 }
 
 // ===== RECURRING =====
@@ -1446,6 +1565,63 @@ function deleteRecurring(id) {
   data.recurring = data.recurring.filter(x => x.id !== id);
   saveData();
   renderSettings();
+}
+
+// ===== CATEGORY MANAGEMENT =====
+function renderCatManager() {
+  const el = document.getElementById('catManager');
+  if (!el) return;
+  let html = '';
+  for (const [key, info] of Object.entries(CATEGORIES)) {
+    const isDefault = !!DEFAULT_CATEGORIES[key];
+    const isProtected = key === 'income' || key === 'other';
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--card-border)">' +
+      '<span style="font-size:1rem">' + info.icon + '</span>' +
+      '<span style="flex:1;font-size:.82rem;font-weight:500;color:var(--text-bright)">' + esc(info.label) + '</span>' +
+      '<span style="width:12px;height:12px;border-radius:50%;background:' + info.color + '"></span>' +
+      (isProtected ? '' : '<button onclick="deleteCategory(\'' + key + '\')" style="color:var(--text-dim);font-size:.85rem;padding:2px 6px;cursor:pointer">&#10005;</button>') +
+    '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function addCustomCategory() {
+  const emoji = document.getElementById('newCatEmoji').value.trim() || '\u{1F4CC}';
+  const name = document.getElementById('newCatName').value.trim();
+  const color = document.getElementById('newCatColor').value;
+  if (!name) { toast('Enter a category name'); return; }
+  const key = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!key) { toast('Invalid name'); return; }
+  if (CATEGORIES[key]) { toast('Category already exists'); return; }
+
+  if (!data.settings.customCategories) data.settings.customCategories = {};
+  data.settings.customCategories[key] = { label: name, color: color, icon: emoji };
+  CATEGORIES[key] = { label: name, color: color, icon: emoji };
+  saveData();
+  document.getElementById('newCatEmoji').value = '';
+  document.getElementById('newCatName').value = '';
+  renderCatManager();
+  toast(name + ' category added');
+}
+
+function deleteCategory(key) {
+  if (key === 'income' || key === 'other') return;
+  const info = CATEGORIES[key];
+  if (!confirm('Delete "' + info.label + '" category? Existing transactions will show as Other.')) return;
+
+  // Remove from custom categories
+  if (data.settings.customCategories && data.settings.customCategories[key]) {
+    delete data.settings.customCategories[key];
+  }
+  // If it's a default category, hide it
+  if (DEFAULT_CATEGORIES[key]) {
+    if (!data.settings.hiddenCategories) data.settings.hiddenCategories = [];
+    if (!data.settings.hiddenCategories.includes(key)) data.settings.hiddenCategories.push(key);
+  }
+  delete CATEGORIES[key];
+  saveData();
+  renderCatManager();
+  toast(info.label + ' removed');
 }
 
 // ===== ADD/EDIT MODAL =====
@@ -1679,6 +1855,8 @@ function loadFromCloud(showToast) {
     }
     if (!showToast && data.lastModified && (!cloud.lastModified || data.lastModified >= cloud.lastModified)) return;
     data = cloud;
+    CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
+    loadCustomCategories();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     renderAll();
     if (showToast) toast('Restored ' + cloud.transactions.length + ' transactions from cloud');
@@ -1759,8 +1937,250 @@ document.addEventListener('touchend', e => {
   swipingEl = null;
 });
 
+// ===== RECEIPT SCANNING =====
+let scanItems = []; // parsed items from receipt
+
+function startScan() {
+  const ep = getSyncUrl();
+  if (!ep) {
+    toast('Set your sync URL in Settings first');
+    return;
+  }
+  document.getElementById('scanInput').value = '';
+  document.getElementById('scanInput').click();
+}
+
+function handleScanFile(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+
+  // Show loading
+  document.getElementById('scanOverlay').classList.add('show');
+  document.getElementById('scanStatus').textContent = 'Resizing image...';
+
+  // Resize and convert to base64
+  resizeImage(file, 1200, function(base64) {
+    document.getElementById('scanStatus').textContent = 'Reading receipt...';
+    sendScanToBackend(base64);
+  });
+}
+
+function resizeImage(file, maxDim, callback) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      // Get base64 without the data:image/jpeg;base64, prefix
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      const base64 = dataUrl.split(',')[1];
+      callback(base64);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function sendScanToBackend(base64) {
+  const ep = getSyncUrl();
+  const scanId = 'scan_' + Date.now();
+
+  // POST image to Apps Script (fire-and-forget due to CORS)
+  fetch(ep, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'text/plain'},
+    body: JSON.stringify({ action: 'scan_receipt', id: scanId, image: base64 })
+  }).catch(() => {});
+
+  // Poll for result via JSONP
+  document.getElementById('scanStatus').textContent = 'AI is reading your receipt...';
+  let attempts = 0;
+  const maxAttempts = 30; // 60 seconds max
+
+  function poll() {
+    attempts++;
+    if (attempts > maxAttempts) {
+      document.getElementById('scanOverlay').classList.remove('show');
+      toast('Scan timed out. Try again.');
+      return;
+    }
+
+    jsonpFetch(ep + '?action=scan_result&id=' + scanId, function(err, resp) {
+      if (err) {
+        // Retry
+        setTimeout(poll, 2000);
+        return;
+      }
+
+      if (resp && resp.pending) {
+        // Still processing
+        document.getElementById('scanStatus').textContent =
+          attempts < 5 ? 'AI is reading your receipt...' :
+          attempts < 15 ? 'Still processing...' : 'Almost done...';
+        setTimeout(poll, 2000);
+        return;
+      }
+
+      // Got a result
+      document.getElementById('scanOverlay').classList.remove('show');
+
+      if (resp && resp.ok === false) {
+        toast('Scan error: ' + (resp.error || 'Unknown'));
+        return;
+      }
+
+      if (resp && resp.receipt) {
+        showReceiptReview(resp.receipt);
+      } else {
+        toast('Could not parse receipt');
+      }
+    });
+  }
+
+  // Wait a bit before first poll (give Gemini time to process)
+  setTimeout(poll, 3000);
+}
+
+function showReceiptReview(receipt) {
+  const store = receipt.store || 'Unknown Store';
+  const date = receipt.date || new Date().toISOString().split('T')[0];
+  const items = receipt.items || [];
+  const tax = receipt.tax || 0;
+  const total = receipt.total || 0;
+
+  // Auto-categorize each item
+  scanItems = items.map((item, i) => ({
+    idx: i,
+    name: item.name,
+    price: parseFloat(item.price) || 0,
+    category: autoCategory(item.name),
+    checked: true
+  }));
+
+  // Store metadata
+  scanItems._store = store;
+  scanItems._date = date;
+  scanItems._tax = tax;
+  scanItems._total = total;
+
+  // Render
+  document.getElementById('reviewStore').textContent =
+    store + (date ? ' \u2022 ' + date : '') + (total ? ' \u2022 Total: $' + total.toFixed(2) : '');
+
+  renderReviewItems();
+  document.getElementById('reviewModal').classList.add('show');
+}
+
+function renderReviewItems() {
+  let html = '';
+  let checkedTotal = 0;
+
+  for (const item of scanItems) {
+    const info = CATEGORIES[item.category] || CATEGORIES.other;
+    if (item.checked) checkedTotal += item.price;
+    html += `<div class="review-item${item.checked ? '' : ' unchecked'}" onclick="toggleReviewItem(${item.idx})">
+      <div class="review-check${item.checked ? ' checked' : ''}">${item.checked ? '\u2713' : ''}</div>
+      <div class="review-item-body">
+        <div class="review-item-name">${esc(titleCase(item.name))}</div>
+        <div class="review-item-cat">${info.icon} ${info.label}</div>
+      </div>
+      <div class="review-item-price">$${item.price.toFixed(2)}</div>
+    </div>`;
+  }
+
+  // Tax row if present
+  if (scanItems._tax > 0) {
+    html += `<div class="review-item" style="opacity:0.6">
+      <div style="width:20px"></div>
+      <div class="review-item-body"><div class="review-item-name">Tax</div></div>
+      <div class="review-item-price">$${scanItems._tax.toFixed(2)}</div>
+    </div>`;
+  }
+
+  // Total
+  const count = scanItems.filter(i => i.checked).length;
+  html = `<div class="review-total">
+    <span class="review-total-label">${count} item${count !== 1 ? 's' : ''} selected</span>
+    <span class="review-total-value">$${checkedTotal.toFixed(2)}</span>
+  </div>` + html;
+
+  document.getElementById('reviewItems').innerHTML = html;
+  document.getElementById('btnAddAll').textContent = `Add ${count} Item${count !== 1 ? 's' : ''}`;
+}
+
+function toggleReviewItem(idx) {
+  const item = scanItems.find(i => i.idx === idx);
+  if (item) {
+    item.checked = !item.checked;
+    renderReviewItems();
+  }
+}
+
+function closeReview() {
+  document.getElementById('reviewModal').classList.remove('show');
+  scanItems = [];
+}
+
+function addAllReviewItems() {
+  const checked = scanItems.filter(i => i.checked);
+  if (checked.length === 0) { toast('No items selected'); return; }
+
+  const store = scanItems._store || 'Store';
+  const date = scanItems._date || new Date().toISOString().split('T')[0];
+  const d = new Date(date + 'T12:00:00');
+
+  for (const item of checked) {
+    const tx = {
+      id: 'tx_' + Date.now() + '_' + item.idx,
+      text: item.name,
+      amount: item.price,
+      type: 'expense',
+      category: item.category,
+      date: date,
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      dayOfWeek: d.getDay(),
+      recurring: false,
+      notes: store
+    };
+    data.transactions.push(tx);
+    updatePatterns(tx);
+  }
+
+  // Add tax as separate item if present
+  if (scanItems._tax > 0) {
+    data.transactions.push({
+      id: 'tx_' + Date.now() + '_tax',
+      text: 'Sales Tax',
+      amount: scanItems._tax,
+      type: 'expense',
+      category: 'other',
+      date: date,
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      dayOfWeek: d.getDay(),
+      recurring: false,
+      notes: store
+    });
+  }
+
+  saveData();
+  closeReview();
+  toast(`${checked.length} items added from ${store}`);
+  renderAll();
+}
+
 // ===== INIT =====
 loadData();
+loadCustomCategories();
 viewMonth = new Date();
 renderAll();
 
