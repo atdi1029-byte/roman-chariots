@@ -1636,19 +1636,17 @@ function doSync(showFeedback) {
   const ep = getSyncUrl();
   if (!ep) { if (showFeedback) toast('No sync URL set'); return; }
   const payload = JSON.stringify(data);
-  const url = ep + '?action=save&data=' + encodeURIComponent(payload);
-  if (url.length > 8000) {
-    // Trim old transactions to fit
-    const trimmed = { ...data, transactions: data.transactions.slice(-200) };
-    const url2 = ep + '?action=save&data=' + encodeURIComponent(JSON.stringify(trimmed));
-    fetch(url2, { mode: 'no-cors' }).catch(() => {});
-  } else {
-    fetch(url, { mode: 'no-cors' }).then(() => {
-      if (showFeedback) toast('Data pushed to cloud');
-    }).catch(() => {
-      if (showFeedback) toast('Cloud save failed');
-    });
-  }
+  if (showFeedback) toast('Pushing ' + data.transactions.length + ' transactions...');
+  fetch(ep, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'text/plain'},
+    body: payload
+  }).then(function() {
+    if (showFeedback) toast('Saved ' + data.transactions.length + ' transactions to cloud');
+  }).catch(function(e) {
+    if (showFeedback) toast('Cloud save failed: ' + e.message);
+  });
 }
 
 function loadFromCloud(showToast) {
@@ -1656,11 +1654,20 @@ function loadFromCloud(showToast) {
   if (!ep) { if (showToast) toast('No sync URL set'); return; }
   if (!showToast && (_syncTimer || Date.now() - _lastLocalSave < 15000)) return;
   if (showToast) toast('Loading from cloud...');
+  const loadStartedAt = _lastLocalSave;
 
-  jsonpFetch(ep + '?action=load', function(err, resp) {
-    if (err) { if (showToast) toast('Cloud fetch failed: ' + err); return; }
-    if (!resp || resp.error) { if (showToast) toast('Cloud error'); return; }
-    if (!resp.data) { if (showToast) toast('Cloud is empty'); return; }
+  fetch(ep + '?action=load').then(function(resp) {
+    return resp.json();
+  }).then(function(resp) {
+    if (!showToast && _lastLocalSave > loadStartedAt) return;
+    if (!resp || !resp.ok) {
+      if (showToast) toast('Cloud error: ' + ((resp && resp.error) || 'unknown'));
+      return;
+    }
+    if (!resp.data) {
+      if (showToast) toast('Cloud is empty');
+      return;
+    }
     let cloud;
     try { cloud = JSON.parse(resp.data); } catch(e) {
       if (showToast) toast('Cloud data corrupted');
@@ -1675,6 +1682,8 @@ function loadFromCloud(showToast) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     renderAll();
     if (showToast) toast('Restored ' + cloud.transactions.length + ' transactions from cloud');
+  }).catch(function(e) {
+    if (showToast) toast('Cloud fetch failed: ' + e.message);
   });
 }
 
@@ -1754,6 +1763,9 @@ document.addEventListener('touchend', e => {
 loadData();
 viewMonth = new Date();
 renderAll();
+
+// Auto-load from cloud on startup — only applies if cloud data is newer (timestamp guard)
+setTimeout(function() { loadFromCloud(false); }, 1500);
 
 // Register service worker
 if ('serviceWorker' in navigator) {

@@ -1,48 +1,88 @@
 // Roman Chariots — Google Sheets Cloud Sync
 // Deploy as Web App: Execute as Me, Anyone can access
 // Sheet name: "ChariotsData" — data in A1, timestamp in B1
+// Save uses POST (handles large payloads), Load uses GET
 
 function doGet(e) {
-  const action = (e && e.parameter && e.parameter.action) || '';
-  const callback = (e && e.parameter && e.parameter.callback) || '';
+  var action = (e && e.parameter && e.parameter.action) || '';
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName('ChariotsData');
-  if (!sheet) {
-    sheet = ss.insertSheet('ChariotsData');
+  if (action === 'load') {
+    return handleLoad();
   }
-
-  let result;
-
   if (action === 'save') {
-    const data = e.parameter.data || '';
-    sheet.getRange('A1').setValue(data);
+    return handleSave(e.parameter.data || '');
+  }
+
+  return ContentService.createTextOutput(
+    JSON.stringify({ok: false, error: 'Unknown action: ' + action})
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    var dataStr = e.postData ? e.postData.contents : '';
+    return handleSave(dataStr);
+  } catch (err) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ok: false, error: err.message})
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function handleSave(dataStr) {
+  try {
+    if (!dataStr) {
+      return ContentService.createTextOutput(
+        JSON.stringify({ok: false, error: 'No data'})
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('ChariotsData');
+    if (!sheet) {
+      sheet = ss.insertSheet('ChariotsData');
+    }
+
+    sheet.getRange('A1').setValue(dataStr);
     sheet.getRange('B1').setValue(new Date().toISOString());
-    result = { ok: true };
-  } else if (action === 'load') {
-    const data = sheet.getRange('A1').getValue();
-    const ts = sheet.getRange('B1').getValue();
-    result = { ok: true, data: data || '', timestamp: ts || '' };
-  } else {
-    result = { error: 'Unknown action: ' + action };
-  }
 
-  // JSONP support
-  if (callback) {
-    return ContentService
-      .createTextOutput(callback + '(' + JSON.stringify(result) + ')')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    return ContentService.createTextOutput(
+      JSON.stringify({ok: true, saved: true, ts: new Date().toISOString()})
+    ).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ok: false, error: err.message})
+    ).setMimeType(ContentService.MimeType.JSON);
   }
+}
 
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
+function handleLoad() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('ChariotsData');
+    if (!sheet) {
+      return ContentService.createTextOutput(
+        JSON.stringify({ok: true, data: null, ts: null})
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var dataStr = sheet.getRange('A1').getValue();
+    var ts = sheet.getRange('B1').getValue();
+
+    return ContentService.createTextOutput(
+      JSON.stringify({ok: true, data: dataStr || null, ts: ts || null})
+    ).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ok: false, error: err.message})
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 // Keep-alive function — set up a 5-minute trigger to prevent cold starts
 function keepAlive() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('ChariotsData');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('ChariotsData');
   if (sheet) {
     sheet.getRange('C1').setValue('ping: ' + new Date().toISOString());
   }
