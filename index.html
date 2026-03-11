@@ -1775,7 +1775,7 @@ function renderComparison() {
 }
 
 function renderPatternCards() {
-  const patterns = Object.entries(data.patterns).filter(([k, p]) => p.count >= 3);
+  const patterns = Object.entries(data.patterns).filter(([k, p]) => p.count >= 3 && p.category !== 'pay' && p.category !== 'tips');
   if (patterns.length === 0) {
     document.getElementById('patternCards').innerHTML = '';
     return;
