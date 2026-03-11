@@ -1054,13 +1054,6 @@ function renderSmartInsights(mk) {
   // Pattern insights — spending habit observations
   for (const [key, p] of Object.entries(data.patterns)) {
     if (p.count < 3) continue;
-    // Day of week pattern
-    const maxDay = p.dayDistribution.indexOf(Math.max(...p.dayDistribution));
-    const dayPct = p.dayDistribution[maxDay] / p.count;
-    if (dayPct > 0.4) {
-      const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][maxDay];
-      insights.push(`${SVG('<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>')} You usually ${key} on ${dayName}s (~${fmt(p.avgAmount)}).`);
-    }
     // Frequency pattern
     if (p.avgGapDays > 0 && p.avgGapDays < 35) {
       const gap = Math.round(p.avgGapDays);
