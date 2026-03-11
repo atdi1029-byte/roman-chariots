@@ -679,6 +679,7 @@ const DEFAULT_CATEGORIES = {
   entertainment:  {label:'Entertainment', color:'#c89090', icon:SVG('<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>')},
   pay:            {label:'Pay',           color:'#5aa088', icon:SVG('<path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 100 4 2 2 0 000-4z"/>')},
   tips:           {label:'Tips',          color:'#6ab898', icon:SVG('<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>')},
+  education:      {label:'Education',     color:'#6878a8', icon:SVG('<path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>')},
   other:          {label:'Other',         color:'#9a8e78', icon:SVG('<path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>')}
 };
 let CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
@@ -748,7 +749,9 @@ const KEYWORDS = {
     'freelance','gig','payment received','payment','sold','sale','transfer in','bonus','commission',
     'dividend','interest','cash back','cashback','venmo received','zelle received',
     'income','earned','paid','pay'],
-  tips: ['tip','tips','gratuity']
+  tips: ['tip','tips','gratuity'],
+  education: ['education','tuition','school','college','university','course','class','textbook',
+    'student','learning','tutorial','training','certification','exam','test fee','study']
 };
 
 // ===== STATE =====
@@ -773,6 +776,7 @@ function loadData() {
   (data.transactions || []).forEach(t => {
     if (t.category === 'food') { t.category = 'groceries'; migrated = true; }
     if (t.category === 'income') { t.category = 'pay'; migrated = true; }
+    if (t.text === 'Education' && t.category === 'other') { t.category = 'education'; migrated = true; }
   });
   (data.recurring || []).forEach(r => {
     if (r.category === 'food') { r.category = 'groceries'; migrated = true; }
@@ -2691,21 +2695,21 @@ function seedJan2026() {
     {text:'Salary',amount:331,type:'income',category:'pay',date:'2026-01-18',dayOfWeek:0},
     {text:'Grocery',amount:6,type:'expense',category:'groceries',date:'2026-01-18',dayOfWeek:0},
     {text:'Fuel',amount:29,type:'expense',category:'transport',date:'2026-01-18',dayOfWeek:0},
-    {text:'Education',amount:16,type:'expense',category:'other',date:'2026-01-20',dayOfWeek:2},
-    {text:'Education',amount:85,type:'expense',category:'other',date:'2026-01-20',dayOfWeek:2},
-    {text:'Education',amount:21,type:'expense',category:'other',date:'2026-01-20',dayOfWeek:2},
+    {text:'Education',amount:16,type:'expense',category:'education',date:'2026-01-20',dayOfWeek:2},
+    {text:'Education',amount:85,type:'expense',category:'education',date:'2026-01-20',dayOfWeek:2},
+    {text:'Education',amount:21,type:'expense',category:'education',date:'2026-01-20',dayOfWeek:2},
     {text:'Grocery',amount:12,type:'expense',category:'groceries',date:'2026-01-20',dayOfWeek:2},
     {text:'YMCA Membership',amount:28,type:'expense',category:'health',date:'2026-01-20',dayOfWeek:2},
     {text:'Grocery',amount:22,type:'expense',category:'groceries',date:'2026-01-21',dayOfWeek:3},
     {text:'Salary',amount:22,type:'income',category:'pay',date:'2026-01-21',dayOfWeek:3},
     {text:'Fuel',amount:31,type:'expense',category:'transport',date:'2026-01-22',dayOfWeek:4},
-    {text:'Education',amount:35,type:'expense',category:'other',date:'2026-01-23',dayOfWeek:5},
+    {text:'Education',amount:35,type:'expense',category:'education',date:'2026-01-23',dayOfWeek:5},
     {text:'Car Things',amount:79,type:'expense',category:'transport',date:'2026-01-23',dayOfWeek:5},
     {text:'Grocery',amount:37,type:'expense',category:'groceries',date:'2026-01-24',dayOfWeek:6},
     {text:'Fuel',amount:27,type:'expense',category:'transport',date:'2026-01-24',dayOfWeek:6},
     {text:'Eating Out',amount:8,type:'expense',category:'groceries',date:'2026-01-24',dayOfWeek:6},
     {text:'Cell Phone',amount:88,type:'expense',category:'bills',date:'2026-01-26',dayOfWeek:1},
-    {text:'Education',amount:73,type:'expense',category:'other',date:'2026-01-27',dayOfWeek:2},
+    {text:'Education',amount:73,type:'expense',category:'education',date:'2026-01-27',dayOfWeek:2},
     {text:'Cat Stuff',amount:31,type:'expense',category:'shopping',date:'2026-01-30',dayOfWeek:5},
     {text:'Grocery',amount:38,type:'expense',category:'groceries',date:'2026-01-30',dayOfWeek:5},
     {text:'Salary',amount:600,type:'income',category:'pay',date:'2026-01-31',dayOfWeek:6}
@@ -2761,14 +2765,14 @@ function seedFeb2026() {
     {text:'Fuel',amount:29,type:'expense',category:'transport',date:'2026-02-19',dayOfWeek:4},
     {text:'Grocery',amount:14,type:'expense',category:'groceries',date:'2026-02-19',dayOfWeek:4},
     {text:'Salary',amount:240,type:'income',category:'pay',date:'2026-02-20',dayOfWeek:5},
-    {text:'Education',amount:20,type:'expense',category:'other',date:'2026-02-20',dayOfWeek:5},
+    {text:'Education',amount:20,type:'expense',category:'education',date:'2026-02-20',dayOfWeek:5},
     {text:'Grocery',amount:22,type:'expense',category:'groceries',date:'2026-02-20',dayOfWeek:5},
     {text:'YMCA Membership',amount:28,type:'expense',category:'health',date:'2026-02-20',dayOfWeek:5},
     {text:'Grocery',amount:14,type:'expense',category:'groceries',date:'2026-02-21',dayOfWeek:6},
     {text:'Grocery',amount:6,type:'expense',category:'groceries',date:'2026-02-21',dayOfWeek:6},
     {text:'Fuel',amount:31,type:'expense',category:'transport',date:'2026-02-22',dayOfWeek:0},
     {text:'Grocery',amount:22,type:'expense',category:'groceries',date:'2026-02-23',dayOfWeek:1},
-    {text:'Education',amount:88,type:'expense',category:'other',date:'2026-02-25',dayOfWeek:3},
+    {text:'Education',amount:88,type:'expense',category:'education',date:'2026-02-25',dayOfWeek:3},
     {text:'Grocery',amount:25,type:'expense',category:'groceries',date:'2026-02-25',dayOfWeek:3},
     {text:'Cell Phone',amount:88,type:'expense',category:'bills',date:'2026-02-26',dayOfWeek:4},
     {text:'Grocery',amount:23,type:'expense',category:'groceries',date:'2026-02-27',dayOfWeek:5},
@@ -2806,20 +2810,20 @@ function seedMar2026() {
   if (localStorage.getItem('rc_seeded_mar2026')) return;
   const txs = [
     {text:'Salary',amount:31,type:'income',category:'pay',date:'2026-03-01',dayOfWeek:0},
-    {text:'Education',amount:10,type:'expense',category:'other',date:'2026-03-01',dayOfWeek:0},
+    {text:'Education',amount:10,type:'expense',category:'education',date:'2026-03-01',dayOfWeek:0},
     {text:'Grocery',amount:9,type:'expense',category:'groceries',date:'2026-03-02',dayOfWeek:1},
     {text:'Grocery',amount:43,type:'expense',category:'groceries',date:'2026-03-03',dayOfWeek:2},
-    {text:'Education',amount:20,type:'expense',category:'other',date:'2026-03-04',dayOfWeek:3},
-    {text:'Education',amount:21,type:'expense',category:'other',date:'2026-03-04',dayOfWeek:3},
+    {text:'Education',amount:20,type:'expense',category:'education',date:'2026-03-04',dayOfWeek:3},
+    {text:'Education',amount:21,type:'expense',category:'education',date:'2026-03-04',dayOfWeek:3},
     {text:'Salary',amount:51,type:'income',category:'pay',date:'2026-03-04',dayOfWeek:3},
-    {text:'Education',amount:15,type:'expense',category:'other',date:'2026-03-04',dayOfWeek:3},
-    {text:'Education',amount:11,type:'expense',category:'other',date:'2026-03-05',dayOfWeek:4},
-    {text:'Education',amount:11,type:'expense',category:'other',date:'2026-03-05',dayOfWeek:4},
-    {text:'Education',amount:11,type:'expense',category:'other',date:'2026-03-05',dayOfWeek:4},
-    {text:'Education',amount:14,type:'expense',category:'other',date:'2026-03-06',dayOfWeek:5},
+    {text:'Education',amount:15,type:'expense',category:'education',date:'2026-03-04',dayOfWeek:3},
+    {text:'Education',amount:11,type:'expense',category:'education',date:'2026-03-05',dayOfWeek:4},
+    {text:'Education',amount:11,type:'expense',category:'education',date:'2026-03-05',dayOfWeek:4},
+    {text:'Education',amount:11,type:'expense',category:'education',date:'2026-03-05',dayOfWeek:4},
+    {text:'Education',amount:14,type:'expense',category:'education',date:'2026-03-06',dayOfWeek:5},
     {text:'Grocery',amount:33,type:'expense',category:'groceries',date:'2026-03-06',dayOfWeek:5},
     {text:'Fuel',amount:35,type:'expense',category:'transport',date:'2026-03-06',dayOfWeek:5},
-    {text:'Education',amount:25,type:'expense',category:'other',date:'2026-03-07',dayOfWeek:6},
+    {text:'Education',amount:25,type:'expense',category:'education',date:'2026-03-07',dayOfWeek:6},
     {text:'Salary',amount:550,type:'income',category:'pay',date:'2026-03-07',dayOfWeek:6},
     {text:'Salary',amount:90,type:'income',category:'pay',date:'2026-03-07',dayOfWeek:6},
     {text:'Fuel',amount:35,type:'expense',category:'transport',date:'2026-03-08',dayOfWeek:0},
