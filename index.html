@@ -323,6 +323,7 @@ a{text-decoration:none;color:inherit}
   z-index:101;transition:transform .15s;
 }
 .fab-scan:active{transform:scale(0.92)}
+@media(min-width:769px){.fab-scan{display:none!important}}
 
 /* ===== SCAN LOADING OVERLAY ===== */
 .scan-overlay{
@@ -569,7 +570,7 @@ a{text-decoration:none;color:inherit}
 <!-- FAB -->
 <button class="fab-scan" onclick="startScan()">&#128247;</button>
 <button class="fab" onclick="openAddModal()">+</button>
-<input type="file" id="scanInput" accept="image/*" capture="environment" style="display:none" onchange="handleScanFile(this)">
+<input type="file" id="scanInput" accept="image/*" style="display:none" onchange="handleScanFile(this)">
 
 <!-- SCAN LOADING OVERLAY -->
 <div class="scan-overlay" id="scanOverlay">
@@ -748,7 +749,7 @@ const KEYWORDS = {
   pay: ['paycheck','salary','wage','direct deposit','deposit','refund','reimbursement','rebate',
     'freelance','gig','payment received','payment','sold','sale','transfer in','bonus','commission',
     'dividend','interest','cash back','cashback','venmo received','zelle received',
-    'income','earned','paid','pay'],
+    'income','earned','paid','pay','royal restaurant','royal'],
   tips: ['tip','tips','gratuity'],
   education: ['education','tuition','school','college','university','course','class','textbook',
     'student','learning','tutorial','training','certification','exam','test fee','study']
@@ -853,12 +854,24 @@ function parseQuickInput() {
     document.getElementById('quickHint').textContent = 'Type what you bought and the amount';
     return;
   }
-  // Parse amount: look for $XX.XX or just numbers at end
-  const amtMatch = raw.match(/\$?([\d,]+\.?\d*)\s*$/);
+  // Parse amount: $XX.XX anywhere, or standalone number at start/end
   let amount = 0, text = raw;
-  if (amtMatch) {
-    amount = parseFloat(amtMatch[1].replace(',', ''));
-    text = raw.substring(0, amtMatch.index).trim();
+  const dollarMatch = raw.match(/\$\s*([\d,]+\.?\d*)/);
+  if (dollarMatch) {
+    amount = parseFloat(dollarMatch[1].replace(',', ''));
+    text = raw.replace(dollarMatch[0], '').trim();
+  } else {
+    // Number at end: "Royal Restaurant 22"
+    const endMatch = raw.match(/^(.+?)\s+([\d,]+\.?\d*)\s*$/);
+    // Number at start: "22 Royal Restaurant"
+    const startMatch = raw.match(/^([\d,]+\.?\d*)\s+(.+)$/);
+    if (endMatch) {
+      text = endMatch[1].trim();
+      amount = parseFloat(endMatch[2].replace(',', ''));
+    } else if (startMatch) {
+      amount = parseFloat(startMatch[1].replace(',', ''));
+      text = startMatch[2].trim();
+    }
   }
   // Auto detect type and category
   const type = autoType(text);
@@ -869,8 +882,13 @@ function parseQuickInput() {
     setType(type);
     selectCategory(cat);
     const catInfo = CATEGORIES[cat];
-    document.getElementById('quickHint').textContent =
-      `${catInfo.icon} ${catInfo.label} \u2022 ${type === 'income' ? '+' : '-'}${fmt(amount)}`;
+    let hint = `${catInfo.icon} ${catInfo.label} \u2022 ${type === 'income' ? '+' : '-'}${fmt(amount)}`;
+    // Show pattern info if we've seen this item before
+    const pat = data.patterns[text.toLowerCase()];
+    if (pat && pat.count > 0) {
+      hint += ` \u2022 avg ${fmt(pat.avgAmount)} \u00d7 ${pat.count}`;
+    }
+    document.getElementById('quickHint').textContent = hint;
   }
 }
 
