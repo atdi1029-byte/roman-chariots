@@ -2033,8 +2033,21 @@ function buildCatPicker() {
   document.getElementById('catPicker').innerHTML = html;
 }
 
+function stripAmount(raw) {
+  if (!raw) return raw;
+  // Strip $XX.XX anywhere
+  let t = raw.replace(/\$\s*[\d,]+\.?\d*/g, '').trim();
+  if (t !== raw) return t;
+  // Strip number at end: "Royal Restaurant 22"
+  t = raw.replace(/\s+[\d,]+\.?\d*\s*$/, '').trim();
+  if (t !== raw) return t;
+  // Strip number at start: "22 Royal Restaurant"
+  t = raw.replace(/^[\d,]+\.?\d*\s+/, '').trim();
+  return t;
+}
+
 function saveTransaction() {
-  const text = document.getElementById('quickInput').value.trim();
+  const text = stripAmount(document.getElementById('quickInput').value.trim());
   const amount = parseFloat(document.getElementById('fieldAmount').value);
   const date = document.getElementById('fieldDate').value;
   const notes = document.getElementById('fieldNote').value.trim();
