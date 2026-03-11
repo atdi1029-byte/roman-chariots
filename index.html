@@ -2473,12 +2473,16 @@ function addAllReviewItems() {
   const store = scanItems._store || 'Store';
   const date = scanItems._date || new Date().toISOString().split('T')[0];
   const d = new Date(date + 'T12:00:00');
+  const tax = scanItems._tax || 0;
+  const subtotal = checked.reduce((s, i) => s + i.price, 0);
 
   for (const item of checked) {
+    // Distribute tax proportionally across items
+    const taxShare = subtotal > 0 && tax > 0 ? Math.round(item.price / subtotal * tax * 100) / 100 : 0;
     const tx = {
       id: 'tx_' + Date.now() + '_' + item.idx,
       text: item.name,
-      amount: item.price,
+      amount: +(item.price + taxShare).toFixed(2),
       type: 'expense',
       category: item.category,
       date: date,
@@ -2489,22 +2493,6 @@ function addAllReviewItems() {
     };
     data.transactions.push(tx);
     updatePatterns(tx);
-  }
-
-  // Add tax as separate item if present
-  if (scanItems._tax > 0) {
-    data.transactions.push({
-      id: 'tx_' + Date.now() + '_tax',
-      text: 'Sales Tax',
-      amount: scanItems._tax,
-      type: 'expense',
-      category: 'other',
-      date: date,
-      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      dayOfWeek: d.getDay(),
-      recurring: false,
-      notes: store
-    });
   }
 
   saveData();
@@ -2756,11 +2744,128 @@ function seedJan2026() {
   console.log('Seeded ' + added + ' Jan 2026 transactions');
 }
 
+function seedFeb2026() {
+  if (localStorage.getItem('rc_seeded_feb2026')) return;
+  const txs = [
+    {text:'Grocery',amount:30,type:'expense',category:'groceries',date:'2026-02-01',dayOfWeek:0},
+    {text:'Fuel',amount:15,type:'expense',category:'transport',date:'2026-02-01',dayOfWeek:0},
+    {text:'Fuel',amount:29,type:'expense',category:'transport',date:'2026-02-02',dayOfWeek:1},
+    {text:'Pharmacy Stuff',amount:23,type:'expense',category:'health',date:'2026-02-04',dayOfWeek:3},
+    {text:'Salary',amount:25,type:'income',category:'pay',date:'2026-02-04',dayOfWeek:3},
+    {text:'Grocery',amount:73,type:'expense',category:'groceries',date:'2026-02-05',dayOfWeek:4},
+    {text:'Pharmacy Stuff',amount:30,type:'expense',category:'health',date:'2026-02-09',dayOfWeek:1},
+    {text:'Cat Stuff',amount:45,type:'expense',category:'shopping',date:'2026-02-09',dayOfWeek:1},
+    {text:'Fuel',amount:28,type:'expense',category:'transport',date:'2026-02-09',dayOfWeek:1},
+    {text:'Grocery',amount:32,type:'expense',category:'groceries',date:'2026-02-09',dayOfWeek:1},
+    {text:'Salary',amount:622,type:'income',category:'pay',date:'2026-02-10',dayOfWeek:2},
+    {text:'Pharmacy Stuff',amount:35,type:'expense',category:'health',date:'2026-02-11',dayOfWeek:3},
+    {text:'Grocery',amount:33,type:'expense',category:'groceries',date:'2026-02-12',dayOfWeek:4},
+    {text:'Insurance',amount:166,type:'expense',category:'bills',date:'2026-02-12',dayOfWeek:4},
+    {text:'Fuel',amount:31.20,type:'expense',category:'transport',date:'2026-02-14',dayOfWeek:6},
+    {text:'Grocery',amount:22,type:'expense',category:'groceries',date:'2026-02-16',dayOfWeek:1},
+    {text:'Grocery',amount:9,type:'expense',category:'groceries',date:'2026-02-16',dayOfWeek:1},
+    {text:'Toll',amount:6,type:'expense',category:'transport',date:'2026-02-17',dayOfWeek:2},
+    {text:'Fuel',amount:29,type:'expense',category:'transport',date:'2026-02-19',dayOfWeek:4},
+    {text:'Grocery',amount:14,type:'expense',category:'groceries',date:'2026-02-19',dayOfWeek:4},
+    {text:'Salary',amount:240,type:'income',category:'pay',date:'2026-02-20',dayOfWeek:5},
+    {text:'Education',amount:20,type:'expense',category:'other',date:'2026-02-20',dayOfWeek:5},
+    {text:'Grocery',amount:22,type:'expense',category:'groceries',date:'2026-02-20',dayOfWeek:5},
+    {text:'YMCA Membership',amount:28,type:'expense',category:'health',date:'2026-02-20',dayOfWeek:5},
+    {text:'Grocery',amount:14,type:'expense',category:'groceries',date:'2026-02-21',dayOfWeek:6},
+    {text:'Grocery',amount:6,type:'expense',category:'groceries',date:'2026-02-21',dayOfWeek:6},
+    {text:'Fuel',amount:31,type:'expense',category:'transport',date:'2026-02-22',dayOfWeek:0},
+    {text:'Grocery',amount:22,type:'expense',category:'groceries',date:'2026-02-23',dayOfWeek:1},
+    {text:'Education',amount:88,type:'expense',category:'other',date:'2026-02-25',dayOfWeek:3},
+    {text:'Grocery',amount:25,type:'expense',category:'groceries',date:'2026-02-25',dayOfWeek:3},
+    {text:'Cell Phone',amount:88,type:'expense',category:'bills',date:'2026-02-26',dayOfWeek:4},
+    {text:'Grocery',amount:23,type:'expense',category:'groceries',date:'2026-02-27',dayOfWeek:5},
+    {text:'Fuel',amount:29,type:'expense',category:'transport',date:'2026-02-28',dayOfWeek:6},
+    {text:'Grocery',amount:17,type:'expense',category:'groceries',date:'2026-02-28',dayOfWeek:6}
+  ];
+  if (!data.transactions) data.transactions = [];
+  const existingDates = new Set(data.transactions.map(t => t.date + '|' + t.text + '|' + t.amount));
+  let added = 0;
+  txs.forEach((t, i) => {
+    const key = t.date + '|' + t.text + '|' + t.amount;
+    if (existingDates.has(key)) return;
+    data.transactions.push({
+      id: 'tx_seed_feb_' + i,
+      text: t.text,
+      amount: t.amount,
+      type: t.type,
+      category: t.category,
+      date: t.date,
+      time: '12:00',
+      dayOfWeek: t.dayOfWeek,
+      recurring: false,
+      notes: ''
+    });
+    added++;
+  });
+  if (added > 0) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+  localStorage.setItem('rc_seeded_feb2026', '1');
+  console.log('Seeded ' + added + ' Feb 2026 transactions');
+}
+
+function seedMar2026() {
+  if (localStorage.getItem('rc_seeded_mar2026')) return;
+  const txs = [
+    {text:'Salary',amount:31,type:'income',category:'pay',date:'2026-03-01',dayOfWeek:0},
+    {text:'Education',amount:10,type:'expense',category:'other',date:'2026-03-01',dayOfWeek:0},
+    {text:'Grocery',amount:9,type:'expense',category:'groceries',date:'2026-03-02',dayOfWeek:1},
+    {text:'Grocery',amount:43,type:'expense',category:'groceries',date:'2026-03-03',dayOfWeek:2},
+    {text:'Education',amount:20,type:'expense',category:'other',date:'2026-03-04',dayOfWeek:3},
+    {text:'Education',amount:21,type:'expense',category:'other',date:'2026-03-04',dayOfWeek:3},
+    {text:'Salary',amount:51,type:'income',category:'pay',date:'2026-03-04',dayOfWeek:3},
+    {text:'Education',amount:15,type:'expense',category:'other',date:'2026-03-04',dayOfWeek:3},
+    {text:'Education',amount:11,type:'expense',category:'other',date:'2026-03-05',dayOfWeek:4},
+    {text:'Education',amount:11,type:'expense',category:'other',date:'2026-03-05',dayOfWeek:4},
+    {text:'Education',amount:11,type:'expense',category:'other',date:'2026-03-05',dayOfWeek:4},
+    {text:'Education',amount:14,type:'expense',category:'other',date:'2026-03-06',dayOfWeek:5},
+    {text:'Grocery',amount:33,type:'expense',category:'groceries',date:'2026-03-06',dayOfWeek:5},
+    {text:'Fuel',amount:35,type:'expense',category:'transport',date:'2026-03-06',dayOfWeek:5},
+    {text:'Education',amount:25,type:'expense',category:'other',date:'2026-03-07',dayOfWeek:6},
+    {text:'Salary',amount:550,type:'income',category:'pay',date:'2026-03-07',dayOfWeek:6},
+    {text:'Salary',amount:90,type:'income',category:'pay',date:'2026-03-07',dayOfWeek:6},
+    {text:'Fuel',amount:35,type:'expense',category:'transport',date:'2026-03-08',dayOfWeek:0},
+    {text:'Grocery',amount:12,type:'expense',category:'groceries',date:'2026-03-09',dayOfWeek:1}
+  ];
+  if (!data.transactions) data.transactions = [];
+  const existingDates = new Set(data.transactions.map(t => t.date + '|' + t.text + '|' + t.amount));
+  let added = 0;
+  txs.forEach((t, i) => {
+    const key = t.date + '|' + t.text + '|' + t.amount;
+    if (existingDates.has(key)) return;
+    data.transactions.push({
+      id: 'tx_seed_mar_' + i,
+      text: t.text,
+      amount: t.amount,
+      type: t.type,
+      category: t.category,
+      date: t.date,
+      time: '12:00',
+      dayOfWeek: t.dayOfWeek,
+      recurring: false,
+      notes: ''
+    });
+    added++;
+  });
+  if (added > 0) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+  localStorage.setItem('rc_seeded_mar2026', '1');
+  console.log('Seeded ' + added + ' Mar 2026 transactions');
+}
+
 // ===== INIT =====
 loadData();
 seedNov2025();
 seedDec2025();
 seedJan2026();
+seedFeb2026();
+seedMar2026();
 loadCustomCategories();
 viewMonth = new Date();
 renderAll();
