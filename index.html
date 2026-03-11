@@ -626,8 +626,8 @@ a{text-decoration:none;color:inherit}
     <div class="field-row">
       <span class="field-label">Type</span>
       <div class="type-toggle">
-        <button class="type-btn active-expense" id="typeExpense" onclick="setType('expense')">Expense</button>
-        <button class="type-btn" id="typeIncome" onclick="setType('income')">Income</button>
+        <button class="type-btn active-expense" id="typeExpense" onclick="manualType=true;setType('expense')">Expense</button>
+        <button class="type-btn" id="typeIncome" onclick="manualType=true;setType('income')">Income</button>
       </div>
     </div>
     <div class="field-row">
@@ -760,6 +760,7 @@ let data = null;
 let viewMonth = new Date(); // currently viewed month
 let currentFilter = 'all';
 let editingTx = null; // transaction being edited
+let manualType = false; // user manually picked income/expense
 let _syncTimer = null;
 let _lastLocalSave = 0;
 let syncReady = false;
@@ -873,13 +874,13 @@ function parseQuickInput() {
       text = startMatch[2].trim();
     }
   }
-  // Auto detect type and category
-  const type = autoType(text);
+  // Auto detect type and category (skip type if user manually picked)
+  const type = manualType ? modalType : autoType(text);
   const cat = type === 'income' ? autoCategory(text) || 'pay' : autoCategory(text);
   // Update fields
   if (amount > 0) document.getElementById('fieldAmount').value = amount.toFixed(2);
   if (text) {
-    setType(type);
+    if (!manualType) setType(type);
     selectCategory(cat);
     const catInfo = CATEGORIES[cat];
     let hint = `${catInfo.icon} ${catInfo.label} \u2022 ${type === 'income' ? '+' : '-'}${fmt(amount)}`;
@@ -1958,6 +1959,7 @@ let modalCategory = 'other';
 
 function openAddModal() {
   editingTx = null;
+  manualType = false;
   document.getElementById('modalTitle').textContent = 'Add Transaction';
   document.getElementById('quickInput').value = '';
   document.getElementById('fieldAmount').value = '';
