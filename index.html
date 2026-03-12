@@ -2114,10 +2114,17 @@ function saveTransaction() {
   // Update patterns
   updatePatterns(tx);
 
-  // Add to recurring if checked
+  // Add to recurring if checked, or update existing recurring item
   if (isRecurring) {
     const exists = data.recurring.find(r => r.text.toLowerCase() === text.toLowerCase());
-    if (!exists) {
+    if (exists) {
+      exists.amount = amount;
+      exists.type = modalType;
+      exists.category = modalCategory;
+      exists.dayOfMonth = d.getDate();
+      exists.active = true;
+      tx.recurringId = exists.id;
+    } else {
       const recId = 'rec_' + Date.now();
       tx.recurringId = recId;
       data.recurring.push({
