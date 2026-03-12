@@ -784,6 +784,18 @@ function loadData() {
     if (r.category === 'food') { r.category = 'groceries'; migrated = true; }
     if (r.category === 'income') { r.category = 'pay'; migrated = true; }
   });
+  // Strip embedded amounts from transaction names (e.g. "22 Royal Restaurant" → "Royal Restaurant")
+  if (!localStorage.getItem('rc_migrated_strip_amounts')) {
+    (data.transactions || []).forEach(t => {
+      const stripped = stripAmount(t.text);
+      if (stripped !== t.text) { t.text = stripped; migrated = true; }
+    });
+    (data.recurring || []).forEach(r => {
+      const stripped = stripAmount(r.text);
+      if (stripped !== r.text) { r.text = stripped; migrated = true; }
+    });
+    localStorage.setItem('rc_migrated_strip_amounts', '1');
+  }
   if (migrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   return data;
 }
