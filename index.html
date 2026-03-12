@@ -2115,7 +2115,7 @@ function saveTransaction() {
   updatePatterns(tx);
 
   // Add to recurring if checked
-  if (isRecurring && !editingTx) {
+  if (isRecurring) {
     const exists = data.recurring.find(r => r.text.toLowerCase() === text.toLowerCase());
     if (!exists) {
       const recId = 'rec_' + Date.now();
