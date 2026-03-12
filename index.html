@@ -788,6 +788,36 @@ function loadData() {
   return data;
 }
 
+function applyRecurring() {
+  if (!data.recurring || data.recurring.length === 0) return;
+  const now = new Date();
+  const mk = getMonthKey(now);
+  let added = false;
+  for (const r of data.recurring) {
+    if (!r.active) continue;
+    // Check if a transaction from this recurring item already exists this month
+    const exists = data.transactions.some(t => t.date.startsWith(mk) && t.recurringId === r.id);
+    if (exists) continue;
+    const day = Math.min(r.dayOfMonth || 1, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate());
+    const dateStr = mk + '-' + String(day).padStart(2, '0');
+    data.transactions.push({
+      id: 'tx_' + Date.now() + '_' + r.id,
+      text: r.text,
+      amount: r.amount,
+      type: r.type,
+      category: r.category,
+      date: dateStr,
+      time: '00:00',
+      dayOfWeek: new Date(dateStr + 'T12:00:00').getDay(),
+      recurring: true,
+      recurringId: r.id,
+      notes: 'Auto-generated recurring'
+    });
+    added = true;
+  }
+  if (added) saveData();
+}
+
 function saveData() {
   data.lastModified = Date.now();
   _lastLocalSave = Date.now();
@@ -2088,8 +2118,10 @@ function saveTransaction() {
   if (isRecurring && !editingTx) {
     const exists = data.recurring.find(r => r.text.toLowerCase() === text.toLowerCase());
     if (!exists) {
+      const recId = 'rec_' + Date.now();
+      tx.recurringId = recId;
       data.recurring.push({
-        id: 'rec_' + Date.now(),
+        id: recId,
         text: text,
         amount: amount,
         type: modalType,
@@ -2897,6 +2929,7 @@ seedJan2026();
 seedFeb2026();
 seedMar2026();
 loadCustomCategories();
+applyRecurring();
 viewMonth = new Date();
 renderAll();
 
@@ -2918,6 +2951,7 @@ setTimeout(function() {
           data = cloud;
           CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
           loadCustomCategories();
+          applyRecurring();
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
           renderAll();
         }
