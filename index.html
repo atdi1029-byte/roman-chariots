@@ -2283,8 +2283,9 @@ function doSync(showFeedback) {
   const ep = getSyncUrl();
   if (!ep) { if (showFeedback) toast('No sync URL set'); return; }
   const payload = JSON.stringify(data);
-  if (showFeedback) toast('Pushing ' + data.transactions.length + ' transactions...');
-  // Dual write: POST (may work on desktop) + fireGet backup (reliable on mobile)
+  const txCount = data.transactions.length;
+  if (showFeedback) toast('Pushing ' + txCount + ' transactions...');
+  // Dual write: POST + fireGet backup (reliable on mobile)
   fetch(ep, {
     method: 'POST',
     mode: 'no-cors',
@@ -2292,8 +2293,28 @@ function doSync(showFeedback) {
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     body: 'data=' + encodeURIComponent(payload)
   }).then(function() {
-    if (showFeedback) toast('Saved ' + data.transactions.length + ' transactions to cloud');
+    // Verify save actually worked by loading from cloud
+    setTimeout(function() {
+      jsonpFetch(ep + '?action=load', function(err, resp) {
+        if (err || !resp || !resp.ok || !resp.data) {
+          if (showFeedback) toast('Cloud save may have failed — could not verify');
+          showSyncWarning(true);
+          return;
+        }
+        var cloud;
+        try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
+        if (cloud && cloud.transactions && cloud.transactions.length >= txCount) {
+          showSyncWarning(false);
+          if (showFeedback) toast('Saved ' + txCount + ' transactions to cloud');
+        } else {
+          var cloudCount = cloud && cloud.transactions ? cloud.transactions.length : 0;
+          showSyncWarning(true);
+          if (showFeedback) toast('Cloud save FAILED — cloud has ' + cloudCount + ', local has ' + txCount);
+        }
+      });
+    }, 2500);
   }).catch(function(e) {
+    showSyncWarning(true);
     if (showFeedback) toast('Cloud save failed: ' + e.message);
   });
   // fireGet backup — img-based GET bypasses mobile CORS redirect issues
@@ -2301,6 +2322,18 @@ function doSync(showFeedback) {
   if (encoded.length < 7000) {
     fireGet(ep + '?action=save&data=' + encoded);
   }
+}
+
+function showSyncWarning(show) {
+  var el = document.getElementById('syncWarning');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'syncWarning';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:8px 12px;font-size:.78rem;text-align:center;z-index:9999;display:none;font-weight:600';
+    el.innerHTML = 'Cloud sync failed — your data is saved locally but NOT in the cloud. Try Push to Cloud from Settings.';
+    document.body.prepend(el);
+  }
+  el.style.display = show ? 'block' : 'none';
 }
 
 function loadFromCloud(showToast) {
