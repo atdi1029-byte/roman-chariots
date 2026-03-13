@@ -931,7 +931,7 @@ function parseQuickInput() {
     if (pat && pat.count > 0) {
       hint += ` \u2022 avg ${fmt(pat.avgAmount)} \u00d7 ${pat.count}`;
     }
-    document.getElementById('quickHint').textContent = hint;
+    document.getElementById('quickHint').innerHTML = hint;
   }
 }
 
