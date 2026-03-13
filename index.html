@@ -2266,6 +2266,8 @@ function getSyncUrl() {
   return (data && data.settings && data.settings.syncUrl) || '';
 }
 
+function fireGet(url) { var img = new Image(); img.src = url; }
+
 function syncToCloud() {
   if (!syncReady) return;
   const ep = getSyncUrl();
@@ -2282,16 +2284,23 @@ function doSync(showFeedback) {
   if (!ep) { if (showFeedback) toast('No sync URL set'); return; }
   const payload = JSON.stringify(data);
   if (showFeedback) toast('Pushing ' + data.transactions.length + ' transactions...');
+  // Dual write: POST (may work on desktop) + fireGet backup (reliable on mobile)
   fetch(ep, {
     method: 'POST',
     mode: 'no-cors',
-    headers: {'Content-Type': 'text/plain'},
-    body: payload
+    redirect: 'follow',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'data=' + encodeURIComponent(payload)
   }).then(function() {
     if (showFeedback) toast('Saved ' + data.transactions.length + ' transactions to cloud');
   }).catch(function(e) {
     if (showFeedback) toast('Cloud save failed: ' + e.message);
   });
+  // fireGet backup — img-based GET bypasses mobile CORS redirect issues
+  var encoded = encodeURIComponent(payload);
+  if (encoded.length < 7000) {
+    fireGet(ep + '?action=save&data=' + encoded);
+  }
 }
 
 function loadFromCloud(showToast) {
@@ -2325,6 +2334,11 @@ function loadFromCloud(showToast) {
       return;
     }
     if (!showToast && data.lastModified && (!cloud.lastModified || data.lastModified >= cloud.lastModified)) return;
+    // Safety: never auto-overwrite local data that has MORE transactions than cloud
+    if (!showToast && data.transactions && cloud.transactions && data.transactions.length > cloud.transactions.length) {
+      console.warn('Cloud has fewer transactions (' + cloud.transactions.length + ') than local (' + data.transactions.length + ') — skipping auto-restore');
+      return;
+    }
     data = cloud;
     CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
     loadCustomCategories();
@@ -3055,7 +3069,9 @@ setTimeout(function() {
       let cloud;
       try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
       if (cloud && cloud.transactions) {
-        if (!data.lastModified || (cloud.lastModified && cloud.lastModified > data.lastModified)) {
+        // Safety: never auto-overwrite local data that has MORE transactions than cloud
+        var localMore = data.transactions && data.transactions.length > cloud.transactions.length;
+        if (!localMore && (!data.lastModified || (cloud.lastModified && cloud.lastModified > data.lastModified))) {
           data = cloud;
           CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
           loadCustomCategories();

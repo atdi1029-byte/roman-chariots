@@ -11,6 +11,10 @@ function doGet(e) {
   if (action === 'load') {
     return wrapResponse(handleLoad(), callback);
   }
+  if (action === 'save') {
+    var dataParam = e.parameter.data || '';
+    return wrapResponse(handleSave(dataParam), callback);
+  }
   if (action === 'scan_result') {
     return wrapResponse(handleScanResult(e.parameter.id), callback);
   }
@@ -21,6 +25,10 @@ function doGet(e) {
 function doPost(e) {
   try {
     var body = e.postData ? e.postData.contents : '';
+    // Handle form-encoded data (from fetch with application/x-www-form-urlencoded)
+    if (e.parameter && e.parameter.data) {
+      return handleSave(e.parameter.data);
+    }
     // Check if this is a scan request
     try {
       var parsed = JSON.parse(body);
