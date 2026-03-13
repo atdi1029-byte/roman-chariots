@@ -325,6 +325,31 @@ a{text-decoration:none;color:inherit}
 .fab-scan:active{transform:scale(0.92)}
 @media(min-width:769px){.fab-scan{display:none!important}}
 
+/* ===== SCAN MENU ===== */
+.scan-menu-backdrop{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.3);z-index:200;
+  display:none;
+}
+.scan-menu-backdrop.show{display:block}
+.scan-menu{
+  position:fixed;bottom:184px;right:24px;
+  background:var(--card);border-radius:var(--radius);
+  box-shadow:0 4px 20px rgba(0,0,0,0.18);
+  z-index:201;overflow:hidden;
+  display:none;min-width:170px;
+}
+.scan-menu.show{display:block}
+.scan-menu-item{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 18px;font-size:.9rem;font-weight:500;
+  color:var(--text);cursor:pointer;
+  transition:background .15s;
+}
+.scan-menu-item:hover,.scan-menu-item:active{background:var(--gold-soft)}
+.scan-menu-item+.scan-menu-item{border-top:1px solid var(--card-border)}
+.scan-menu-item svg{width:20px;height:20px;stroke:var(--sky);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
 /* ===== SCAN LOADING OVERLAY ===== */
 .scan-overlay{
   position:fixed;top:0;left:0;right:0;bottom:0;
@@ -570,7 +595,21 @@ a{text-decoration:none;color:inherit}
 <!-- FAB -->
 <button class="fab-scan" onclick="startScan()">&#128247;</button>
 <button class="fab" onclick="openAddModal()">+</button>
-<input type="file" id="scanInput" accept="image/*" style="display:none" onchange="handleScanFile(this)">
+<input type="file" id="scanInputCamera" accept="image/*" capture="environment" style="display:none" onchange="handleScanFile(this)">
+<input type="file" id="scanInputUpload" accept="image/*" style="display:none" onchange="handleScanFile(this)">
+
+<!-- SCAN METHOD MENU -->
+<div class="scan-menu-backdrop" id="scanBackdrop" onclick="closeScanMenu()"></div>
+<div class="scan-menu" id="scanMenu">
+  <div class="scan-menu-item" onclick="scanFromCamera()">
+    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    Take Photo
+  </div>
+  <div class="scan-menu-item" onclick="scanFromUpload()">
+    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload Image
+  </div>
+</div>
 
 <!-- SCAN LOADING OVERLAY -->
 <div class="scan-overlay" id="scanOverlay">
@@ -2362,8 +2401,27 @@ function startScan() {
     toast('Set your sync URL in Settings first');
     return;
   }
-  document.getElementById('scanInput').value = '';
-  document.getElementById('scanInput').click();
+  document.getElementById('scanMenu').classList.add('show');
+  document.getElementById('scanBackdrop').classList.add('show');
+}
+
+function closeScanMenu() {
+  document.getElementById('scanMenu').classList.remove('show');
+  document.getElementById('scanBackdrop').classList.remove('show');
+}
+
+function scanFromCamera() {
+  closeScanMenu();
+  const inp = document.getElementById('scanInputCamera');
+  inp.value = '';
+  inp.click();
+}
+
+function scanFromUpload() {
+  closeScanMenu();
+  const inp = document.getElementById('scanInputUpload');
+  inp.value = '';
+  inp.click();
 }
 
 function handleScanFile(input) {
