@@ -197,6 +197,14 @@ a{text-decoration:none;color:inherit}
 .tx-amount{font-size:.85rem;font-weight:700;flex-shrink:0}
 .tx-amount.income{color:var(--text-bright)}
 .tx-amount.expense{color:var(--text-bright)}
+.tx-copy{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-dim);background:var(--gold-soft);
+  transition:background .15s,color .15s;margin-left:4px;
+}
+.tx-copy:active{background:var(--gold);color:#fff}
+.tx-copy svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tx-empty{text-align:center;padding:40px 10px;color:var(--text-dim);font-size:.82rem}
 
 /* ===== RECURRING ===== */
@@ -1491,6 +1499,9 @@ function renderTransactions() {
           <div class="tx-meta">${info.label}${t.notes ? ' \u2022 ' + esc(t.notes) : ''}${t.time ? ' \u2022 ' + t.time : ''}</div>
         </div>
         <div class="tx-amount ${t.type}">${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}</div>
+        <div class="tx-copy" onclick="event.stopPropagation();copyTransaction('${t.id}')" title="Duplicate">
+          <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </div>
       </div>`;
     }
     html += '</div>';
@@ -2068,6 +2079,26 @@ function openEditModal(id) {
   document.getElementById('fieldDate').value = tx.date;
   document.getElementById('fieldRecurring').checked = false;
   document.getElementById('btnSave').textContent = 'Update';
+  setType(tx.type);
+  selectCategory(tx.category);
+  buildCatPicker();
+  document.getElementById('quickHint').textContent = '';
+  document.getElementById('modalOverlay').classList.add('show');
+  document.getElementById('addModal').classList.add('show');
+}
+
+function copyTransaction(id) {
+  const tx = data.transactions.find(t => t.id === id);
+  if (!tx) return;
+  editingTx = null;
+  manualType = false;
+  document.getElementById('modalTitle').textContent = 'Add Transaction';
+  document.getElementById('quickInput').value = tx.text;
+  document.getElementById('fieldAmount').value = tx.amount.toFixed(2);
+  document.getElementById('fieldNote').value = tx.notes || '';
+  document.getElementById('fieldDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fieldRecurring').checked = false;
+  document.getElementById('btnSave').textContent = 'Save';
   setType(tx.type);
   selectCategory(tx.category);
   buildCatPicker();
