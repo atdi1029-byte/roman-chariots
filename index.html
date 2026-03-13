@@ -818,7 +818,7 @@ function loadData() {
     data = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!data || !data.transactions) throw 0;
   } catch(e) {
-    data = { transactions: [], recurring: [], patterns: {}, settings: { name: '', syncUrl: '' }, lastModified: Date.now() };
+    data = { transactions: [], recurring: [], patterns: {}, settings: { name: '', syncUrl: '' }, lastModified: 0 };
   }
   // Migrate old categories
   let migrated = false;
@@ -2254,7 +2254,7 @@ function clearData() {
   if (!confirm('Are you really sure?')) return;
   // Preserve syncUrl so user doesn't lose their cloud connection
   const savedSyncUrl = (data && data.settings && data.settings.syncUrl) || '';
-  data = { transactions: [], recurring: [], patterns: {}, settings: { name: '', syncUrl: savedSyncUrl }, lastModified: Date.now() };
+  data = { transactions: [], recurring: [], patterns: {}, settings: { name: '', syncUrl: savedSyncUrl }, lastModified: 0 };
   // Save locally only — do NOT sync empty data to cloud
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   renderAll();
@@ -2333,11 +2333,15 @@ function loadFromCloud(showToast) {
       if (showToast) toast('Cloud data invalid');
       return;
     }
-    if (!showToast && data.lastModified && (!cloud.lastModified || data.lastModified >= cloud.lastModified)) return;
-    // Safety: never auto-overwrite local data that has MORE transactions than cloud
-    if (!showToast && data.transactions && cloud.transactions && data.transactions.length > cloud.transactions.length) {
-      console.warn('Cloud has fewer transactions (' + cloud.transactions.length + ') than local (' + data.transactions.length + ') — skipping auto-restore');
-      return;
+    // Always restore from cloud if local is empty
+    var localEmpty = !data.transactions || data.transactions.length === 0;
+    if (!showToast && !localEmpty) {
+      if (data.lastModified && (!cloud.lastModified || data.lastModified >= cloud.lastModified)) return;
+      // Safety: never auto-overwrite local data that has MORE transactions than cloud
+      if (data.transactions.length > cloud.transactions.length) {
+        console.warn('Cloud has fewer transactions (' + cloud.transactions.length + ') than local (' + data.transactions.length + ') — skipping auto-restore');
+        return;
+      }
     }
     data = cloud;
     CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
@@ -3069,9 +3073,11 @@ setTimeout(function() {
       let cloud;
       try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
       if (cloud && cloud.transactions) {
+        // Always restore from cloud if local is empty
+        var localEmpty = !data.transactions || data.transactions.length === 0;
         // Safety: never auto-overwrite local data that has MORE transactions than cloud
-        var localMore = data.transactions && data.transactions.length > cloud.transactions.length;
-        if (!localMore && (!data.lastModified || (cloud.lastModified && cloud.lastModified > data.lastModified))) {
+        var localMore = !localEmpty && data.transactions.length > cloud.transactions.length;
+        if (localEmpty || (!localMore && (!data.lastModified || (cloud.lastModified && cloud.lastModified > data.lastModified)))) {
           data = cloud;
           CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
           loadCustomCategories();
