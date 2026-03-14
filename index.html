@@ -416,6 +416,44 @@ a{text-decoration:none;color:inherit}
 }
 .review-total-label{font-size:.75rem;font-weight:600;color:var(--gold)}
 .review-total-value{font-size:.85rem;font-weight:700;color:var(--gold)}
+.review-item-edit{
+  display:flex;align-items:center;justify-content:center;
+  width:24px;height:24px;flex-shrink:0;border-radius:4px;
+  color:var(--text-dim);font-size:.7rem;
+}
+.review-item-edit:active{background:var(--gold-soft)}
+.review-edit-row{
+  display:flex;flex-direction:column;gap:6px;
+  padding:10px 12px;background:var(--gold-soft);
+  border:1px solid rgba(208,168,64,0.25);border-radius:var(--radius-sm);
+  margin-bottom:4px;
+}
+.review-edit-field{
+  display:flex;align-items:center;gap:8px;
+}
+.review-edit-field label{font-size:.65rem;color:var(--text-dim);width:50px;flex-shrink:0;font-weight:600}
+.review-edit-field input{
+  flex:1;padding:6px 8px;font-size:.8rem;
+  background:var(--input-bg);border:1px solid var(--card-border);
+  border-radius:6px;color:var(--text);min-width:0;
+}
+.review-edit-cats{display:flex;flex-wrap:wrap;gap:4px}
+.review-edit-cat{
+  padding:3px 8px;font-size:.6rem;font-weight:600;
+  border-radius:12px;border:1px solid var(--card-border);
+  background:var(--card);color:var(--text-dim);
+}
+.review-edit-cat.active{background:var(--sky-soft);border-color:var(--sky);color:var(--sky)}
+.review-edit-btns{display:flex;gap:6px;justify-content:flex-end;margin-top:2px}
+.review-edit-btns button{
+  padding:4px 12px;font-size:.7rem;font-weight:600;
+  border-radius:6px;
+}
+.review-edit-save{background:var(--sky);color:#fff}
+.review-edit-cancel{background:var(--bg-warm);color:var(--text-dim)}
+.review-item-memorized{
+  font-size:.55rem;color:var(--teal);font-style:italic;margin-top:1px;
+}
 
 /* ===== ADD MODAL ===== */
 .modal-overlay{
@@ -818,7 +856,7 @@ function loadData() {
     data = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!data || !data.transactions) throw 0;
   } catch(e) {
-    data = { transactions: [], recurring: [], patterns: {}, settings: { name: '', syncUrl: '' }, lastModified: 0 };
+    data = { transactions: [], recurring: [], patterns: {}, scanMemory: {}, settings: { name: '', syncUrl: '' }, lastModified: 0 };
   }
   // Migrate old categories
   let migrated = false;
@@ -843,6 +881,7 @@ function loadData() {
     });
     localStorage.setItem('rc_migrated_strip_amounts', '1');
   }
+  if (!data.scanMemory) data.scanMemory = {};
   if (migrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   return data;
 }
@@ -2474,8 +2513,76 @@ document.addEventListener('touchend', e => {
   swipingEl = null;
 });
 
+// ===== SCAN MEMORY (fuzzy item recognition) =====
+// data.scanMemory = { normalizedOcr: { name, category, variants: [ocr1, ocr2, ...] } }
+
+function normalizeScan(text) {
+  return text.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function getSignificantWords(text) {
+  // Split into words, keep only meaningful ones (3+ chars, not pure numbers)
+  return normalizeScan(text).split(' ').filter(w => w.length >= 3 && !/^\d+$/.test(w));
+}
+
+function matchScanMemory(ocrText) {
+  if (!data.scanMemory) return null;
+  const norm = normalizeScan(ocrText);
+  // 1. Exact normalized match
+  if (data.scanMemory[norm]) return data.scanMemory[norm];
+  // 2. Check against all stored variants
+  const ocrWords = getSignificantWords(ocrText);
+  if (ocrWords.length === 0) return null;
+  let bestMatch = null, bestScore = 0;
+  for (const [key, mem] of Object.entries(data.scanMemory)) {
+    const variants = mem.variants || [key];
+    for (const v of variants) {
+      const vWords = getSignificantWords(v);
+      if (vWords.length === 0) continue;
+      let shared = 0;
+      for (const ow of ocrWords) {
+        for (const vw of vWords) {
+          // Exact word match or abbreviation (one is prefix of the other, min 3 chars)
+          if (ow === vw || (ow.length >= 3 && vw.startsWith(ow)) || (vw.length >= 3 && ow.startsWith(vw))) {
+            shared++; break;
+          }
+        }
+      }
+      const score = shared / Math.max(ocrWords.length, vWords.length);
+      if (score > bestScore) { bestScore = score; bestMatch = mem; }
+    }
+  }
+  // Need at least 50% word overlap to match
+  return bestScore >= 0.5 ? bestMatch : null;
+}
+
+function learnScanItem(ocrText, preferredName, category) {
+  if (!data.scanMemory) data.scanMemory = {};
+  const norm = normalizeScan(ocrText);
+  if (!norm) return;
+  // Check if this preferred name already has an entry
+  let existing = null;
+  for (const [key, mem] of Object.entries(data.scanMemory)) {
+    if (mem.name.toLowerCase() === preferredName.toLowerCase()) {
+      existing = { key, mem }; break;
+    }
+  }
+  if (existing) {
+    // Add this OCR variant to existing entry
+    if (!existing.mem.variants) existing.mem.variants = [existing.key];
+    if (!existing.mem.variants.includes(norm)) existing.mem.variants.push(norm);
+    existing.mem.category = category;
+    // Also store under new normalized key for fast exact lookup
+    data.scanMemory[norm] = existing.mem;
+  } else {
+    data.scanMemory[norm] = { name: preferredName, category, variants: [norm] };
+  }
+  saveData();
+}
+
 // ===== RECEIPT SCANNING =====
 let scanItems = []; // parsed items from receipt
+let editingIdx = -1; // which item is being edited (-1 = none)
 
 function startScan() {
   const ep = getSyncUrl();
@@ -2614,20 +2721,26 @@ function showReceiptReview(receipt) {
   const tax = receipt.tax || 0;
   const total = receipt.total || 0;
 
-  // Auto-categorize each item
-  scanItems = items.map((item, i) => ({
-    idx: i,
-    name: item.name,
-    price: parseFloat(item.price) || 0,
-    category: autoCategory(item.name),
-    checked: true
-  }));
+  // Auto-categorize each item, applying scan memory
+  scanItems = items.map((item, i) => {
+    const mem = matchScanMemory(item.name);
+    return {
+      idx: i,
+      ocrName: item.name, // original OCR text (never changes)
+      name: mem ? mem.name : item.name,
+      price: parseFloat(item.price) || 0,
+      category: mem ? mem.category : autoCategory(item.name),
+      checked: true,
+      memorized: !!mem // flag: was this auto-corrected by memory?
+    };
+  });
 
   // Store metadata
   scanItems._store = store;
   scanItems._date = date;
   scanItems._tax = tax;
   scanItems._total = total;
+  editingIdx = -1;
 
   // Render
   document.getElementById('reviewStore').textContent =
@@ -2644,14 +2757,44 @@ function renderReviewItems() {
   for (const item of scanItems) {
     const info = CATEGORIES[item.category] || CATEGORIES.other;
     if (item.checked) checkedTotal += item.price;
-    html += `<div class="review-item${item.checked ? '' : ' unchecked'}" onclick="toggleReviewItem(${item.idx})">
-      <div class="review-check${item.checked ? ' checked' : ''}">${item.checked ? SVG('<polyline points="20 6 9 17 4 12"/>') : ''}</div>
-      <div class="review-item-body">
-        <div class="review-item-name">${esc(titleCase(item.name))}</div>
-        <div class="review-item-cat">${info.icon} ${info.label}</div>
-      </div>
-      <div class="review-item-price">$${item.price.toFixed(2)}</div>
-    </div>`;
+
+    if (editingIdx === item.idx) {
+      // Inline edit mode
+      let catHtml = '';
+      for (const [key, cat] of Object.entries(CATEGORIES)) {
+        catHtml += `<div class="review-edit-cat${item.category === key ? ' active' : ''}" onclick="event.stopPropagation();setReviewCat(${item.idx},'${key}')">${cat.icon} ${cat.label}</div>`;
+      }
+      html += `<div class="review-edit-row" onclick="event.stopPropagation()">
+        <div class="review-edit-field">
+          <label>Name</label>
+          <input id="editName${item.idx}" value="${esc(item.name)}" onclick="event.stopPropagation()">
+        </div>
+        <div class="review-edit-field">
+          <label>Price</label>
+          <input id="editPrice${item.idx}" type="number" inputmode="decimal" step="0.01" value="${item.price.toFixed(2)}" onclick="event.stopPropagation()">
+        </div>
+        <div class="review-edit-field" style="align-items:flex-start">
+          <label style="margin-top:4px">Cat</label>
+          <div class="review-edit-cats">${catHtml}</div>
+        </div>
+        <div class="review-edit-btns">
+          <button class="review-edit-cancel" onclick="event.stopPropagation();cancelEdit()">Cancel</button>
+          <button class="review-edit-save" onclick="event.stopPropagation();saveEdit(${item.idx})">Save</button>
+        </div>
+      </div>`;
+    } else {
+      // Normal display row
+      html += `<div class="review-item${item.checked ? '' : ' unchecked'}">
+        <div class="review-check${item.checked ? ' checked' : ''}" onclick="event.stopPropagation();toggleReviewItem(${item.idx})">${item.checked ? SVG('<polyline points="20 6 9 17 4 12"/>') : ''}</div>
+        <div class="review-item-body" onclick="event.stopPropagation();openEdit(${item.idx})">
+          <div class="review-item-name">${esc(titleCase(item.name))}</div>
+          <div class="review-item-cat">${info.icon} ${info.label}</div>
+          ${item.memorized ? '<div class="review-item-memorized">auto-recognized</div>' : ''}
+        </div>
+        <div class="review-item-price" onclick="event.stopPropagation();openEdit(${item.idx})">$${item.price.toFixed(2)}</div>
+        <div class="review-item-edit" onclick="event.stopPropagation();openEdit(${item.idx})">${SVG('<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>')}</div>
+      </div>`;
+    }
   }
 
   // Tax row if present
@@ -2660,6 +2803,7 @@ function renderReviewItems() {
       <div style="width:20px"></div>
       <div class="review-item-body"><div class="review-item-name">Tax</div></div>
       <div class="review-item-price">$${scanItems._tax.toFixed(2)}</div>
+      <div style="width:24px"></div>
     </div>`;
   }
 
@@ -2674,6 +2818,53 @@ function renderReviewItems() {
   document.getElementById('btnAddAll').textContent = `Add ${count} Item${count !== 1 ? 's' : ''}`;
 }
 
+function openEdit(idx) {
+  editingIdx = idx;
+  renderReviewItems();
+  // Focus the name field
+  setTimeout(() => {
+    const el = document.getElementById('editName' + idx);
+    if (el) { el.focus(); el.select(); }
+  }, 50);
+}
+
+function cancelEdit() {
+  editingIdx = -1;
+  renderReviewItems();
+}
+
+function setReviewCat(idx, cat) {
+  const item = scanItems.find(i => i.idx === idx);
+  if (item) item.category = cat;
+  renderReviewItems();
+  // Keep edit open (don't close)
+}
+
+function saveEdit(idx) {
+  const item = scanItems.find(i => i.idx === idx);
+  if (!item) return;
+  const nameEl = document.getElementById('editName' + idx);
+  const priceEl = document.getElementById('editPrice' + idx);
+  const newName = (nameEl.value || '').trim();
+  const newPrice = parseFloat(priceEl.value) || 0;
+  if (!newName) { toast('Name cannot be empty'); return; }
+
+  // If user changed the name from the OCR text, learn it
+  const ocrNorm = normalizeScan(item.ocrName);
+  const newNorm = normalizeScan(newName);
+  if (ocrNorm !== newNorm) {
+    learnScanItem(item.ocrName, newName, item.category);
+  } else if (item.ocrName && item.category) {
+    // Even if name didn't change, learn the category preference
+    learnScanItem(item.ocrName, newName, item.category);
+  }
+
+  item.name = newName;
+  item.price = newPrice;
+  editingIdx = -1;
+  renderReviewItems();
+}
+
 function toggleReviewItem(idx) {
   const item = scanItems.find(i => i.idx === idx);
   if (item) {
@@ -2685,6 +2876,7 @@ function toggleReviewItem(idx) {
 function closeReview() {
   document.getElementById('reviewModal').classList.remove('show');
   scanItems = [];
+  editingIdx = -1;
 }
 
 function addAllReviewItems() {
@@ -2698,6 +2890,9 @@ function addAllReviewItems() {
   const subtotal = checked.reduce((s, i) => s + i.price, 0);
 
   for (const item of checked) {
+    // Learn every item that gets added (reinforces memory)
+    learnScanItem(item.ocrName, item.name, item.category);
+
     // Distribute tax proportionally across items
     const taxShare = subtotal > 0 && tax > 0 ? Math.round(item.price / subtotal * tax * 100) / 100 : 0;
     const tx = {
