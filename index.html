@@ -2322,39 +2322,80 @@ function doSync(showFeedback) {
   _syncTimer = null;
   const ep = getSyncUrl();
   if (!ep) { if (showFeedback) toast('No sync URL set'); return; }
-  const payload = JSON.stringify(data);
-  const txCount = data.transactions.length;
-  if (showFeedback) toast('Pushing ' + txCount + ' transactions...');
-  // POST with text/plain — body reaches GAS before 302 redirect (proven pattern)
-  fetch(ep, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: {'Content-Type': 'text/plain'},
-    body: JSON.stringify({ action: 'save', data: payload })
-  }).then(function() {
-    // Verify save actually worked by loading from cloud
-    setTimeout(function() {
-      jsonpFetch(ep + '?action=load', function(err, resp) {
-        if (err || !resp || !resp.ok || !resp.data) {
-          if (showFeedback) toast('Cloud save may have failed — could not verify');
-          showSyncWarning(true);
-          return;
+  if (showFeedback) toast('Syncing...');
+
+  // Step 1: Pull latest from sheet first
+  jsonpFetch(ep + '?action=load', function(err, resp) {
+    var cloud = null;
+    if (!err && resp && resp.ok && resp.data) {
+      try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
+    }
+
+    // Step 2: Merge — add any cloud transactions we don't have locally
+    if (cloud && cloud.transactions && cloud.transactions.length > 0) {
+      const localIds = new Set(data.transactions.map(t => t.id));
+      let merged = 0;
+      for (const ct of cloud.transactions) {
+        if (ct.id && !localIds.has(ct.id)) {
+          data.transactions.push(ct);
+          merged++;
         }
-        var cloud;
-        try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
-        if (cloud && cloud.transactions && cloud.transactions.length >= txCount) {
-          showSyncWarning(false);
-          if (showFeedback) toast('Saved ' + txCount + ' transactions to cloud');
-        } else {
-          var cloudCount = cloud && cloud.transactions ? cloud.transactions.length : 0;
-          showSyncWarning(true);
-          if (showFeedback) toast('Cloud save FAILED — cloud has ' + cloudCount + ', local has ' + txCount);
+      }
+      // Also merge recurring, patterns, scanMemory from cloud
+      if (cloud.recurring) {
+        const localRecIds = new Set((data.recurring || []).map(r => r.id));
+        for (const cr of cloud.recurring) {
+          if (cr.id && !localRecIds.has(cr.id)) {
+            if (!data.recurring) data.recurring = [];
+            data.recurring.push(cr);
+          }
         }
-      });
-    }, 2500);
-  }).catch(function(e) {
-    showSyncWarning(true);
-    if (showFeedback) toast('Cloud save failed: ' + e.message);
+      }
+      if (cloud.scanMemory) {
+        if (!data.scanMemory) data.scanMemory = {};
+        for (const [k, v] of Object.entries(cloud.scanMemory)) {
+          if (!data.scanMemory[k]) data.scanMemory[k] = v;
+        }
+      }
+      if (merged > 0) {
+        // Save merged data to localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        renderAll();
+      }
+    }
+
+    // Step 3: Push merged data to sheet
+    const payload = JSON.stringify(data);
+    const txCount = data.transactions.length;
+    fetch(ep, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({ action: 'save', data: payload })
+    }).then(function() {
+      // Verify save worked
+      setTimeout(function() {
+        jsonpFetch(ep + '?action=load', function(err2, resp2) {
+          if (err2 || !resp2 || !resp2.ok || !resp2.data) {
+            showSyncWarning(true);
+            if (showFeedback) toast('Cloud save may have failed');
+            return;
+          }
+          var check;
+          try { check = typeof resp2.data === 'string' ? JSON.parse(resp2.data) : resp2.data; } catch(e) {}
+          if (check && check.transactions && check.transactions.length >= txCount) {
+            showSyncWarning(false);
+            if (showFeedback) toast('Synced ' + txCount + ' transactions');
+          } else {
+            showSyncWarning(true);
+            if (showFeedback) toast('Sync may have failed');
+          }
+        });
+      }, 2500);
+    }).catch(function(e) {
+      showSyncWarning(true);
+      if (showFeedback) toast('Sync failed: ' + e.message);
+    });
   });
 }
 
