@@ -887,33 +887,25 @@ function loadData() {
   return data;
 }
 
-function dedupRecurring() {
-  // One-time cleanup: remove duplicate auto-generated recurring transactions
-  if (!data.transactions || !data.recurring) return;
-  const now = new Date();
-  const mk = getMonthKey(now);
+function dedupTransactions() {
+  // Remove duplicate transactions by matching date+text+amount+time
+  if (!data.transactions || data.transactions.length === 0) return;
   const seen = new Set();
-  const toRemove = [];
-  for (let i = 0; i < data.transactions.length; i++) {
-    const t = data.transactions[i];
-    if (t.recurringId && t.date.startsWith(mk)) {
-      if (seen.has(t.recurringId)) {
-        toRemove.push(i);
-      } else {
-        seen.add(t.recurringId);
-      }
-    }
+  const clean = [];
+  for (const t of data.transactions) {
+    const key = t.date + '|' + t.text + '|' + t.amount + '|' + (t.time || '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    clean.push(t);
   }
-  if (toRemove.length > 0) {
-    for (let i = toRemove.length - 1; i >= 0; i--) {
-      data.transactions.splice(toRemove[i], 1);
-    }
+  if (clean.length < data.transactions.length) {
+    data.transactions = clean;
     saveData();
   }
 }
 
 function applyRecurring() {
-  dedupRecurring();
+  dedupTransactions();
   if (!data.recurring || data.recurring.length === 0) return;
   const now = new Date();
   const mk = getMonthKey(now);
