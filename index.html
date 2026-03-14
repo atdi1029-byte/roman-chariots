@@ -2314,7 +2314,8 @@ function syncToCloud() {
   // Safety: refuse to overwrite cloud with empty data
   if (!data.transactions || data.transactions.length === 0) return;
   clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => doSync(false), 2000);
+  // Save immediately — Google Sheets is the priority
+  doSync(false);
 }
 
 function doSync(showFeedback) {
@@ -2981,7 +2982,7 @@ function seedNov2025() {
     added++;
   });
   if (added > 0) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    saveData();
   }
   localStorage.setItem('rc_seeded_nov2025', '1');
   console.log('Seeded ' + added + ' Nov 2025 transactions');
@@ -3066,7 +3067,7 @@ function seedDec2025() {
     added++;
   });
   if (added > 0) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    saveData();
   }
   localStorage.setItem('rc_seeded_dec2025', '1');
   console.log('Seeded ' + added + ' Dec 2025 transactions');
@@ -3148,7 +3149,7 @@ function seedJan2026() {
     added++;
   });
   if (added > 0) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    saveData();
   }
   localStorage.setItem('rc_seeded_jan2026', '1');
   console.log('Seeded ' + added + ' Jan 2026 transactions');
@@ -3213,7 +3214,7 @@ function seedFeb2026() {
     added++;
   });
   if (added > 0) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    saveData();
   }
   localStorage.setItem('rc_seeded_feb2026', '1');
   console.log('Seeded ' + added + ' Feb 2026 transactions');
@@ -3263,7 +3264,7 @@ function seedMar2026() {
     added++;
   });
   if (added > 0) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    saveData();
   }
   localStorage.setItem('rc_seeded_mar2026', '1');
   console.log('Seeded ' + added + ' Mar 2026 transactions');
