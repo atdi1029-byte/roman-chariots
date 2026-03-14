@@ -882,6 +882,7 @@ function loadData() {
     localStorage.setItem('rc_migrated_strip_amounts', '1');
   }
   if (!data.scanMemory) data.scanMemory = {};
+  if (!data.deletedIds) data.deletedIds = [];
   if (migrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   return data;
 }
@@ -2269,6 +2270,8 @@ function saveTransaction() {
 function deleteTransaction() {
   if (!editingTx) return;
   if (!confirm('Delete this transaction?')) return;
+  if (!data.deletedIds) data.deletedIds = [];
+  data.deletedIds.push(editingTx.id);
   data.transactions = data.transactions.filter(t => t.id !== editingTx.id);
   saveData();
   closeAddModal();
@@ -2334,9 +2337,20 @@ function doSync(showFeedback) {
     // Step 2: Merge — add any cloud transactions we don't have locally
     if (cloud && cloud.transactions && cloud.transactions.length > 0) {
       const localIds = new Set(data.transactions.map(t => t.id));
+      // Combine deleted IDs from both sides
+      const localDeleted = new Set(data.deletedIds || []);
+      const cloudDeleted = new Set(cloud.deletedIds || []);
+      // Merge deleted lists
+      if (!data.deletedIds) data.deletedIds = [];
+      for (const did of cloudDeleted) {
+        if (!localDeleted.has(did)) data.deletedIds.push(did);
+      }
+      const allDeleted = new Set(data.deletedIds);
+      // Remove locally any transactions the other device deleted
+      data.transactions = data.transactions.filter(t => !cloudDeleted.has(t.id));
       let merged = 0;
       for (const ct of cloud.transactions) {
-        if (ct.id && !localIds.has(ct.id)) {
+        if (ct.id && !localIds.has(ct.id) && !allDeleted.has(ct.id)) {
           data.transactions.push(ct);
           merged++;
         }
@@ -2536,6 +2550,8 @@ document.addEventListener('touchend', e => {
   if (dx < -100) {
     const id = swipingEl.getAttribute('onclick').match(/'([^']+)'/)?.[1];
     if (id && confirm('Delete this transaction?')) {
+      if (!data.deletedIds) data.deletedIds = [];
+      data.deletedIds.push(id);
       data.transactions = data.transactions.filter(t => t.id !== id);
       saveData();
       renderAll();
