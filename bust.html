@@ -1,0 +1,15 @@
+<!DOCTYPE html><html><head><title>Cache Bust</title></head><body>
+<p>Clearing cache...</p>
+<script>
+(async()=>{
+  if('serviceWorker' in navigator){
+    const regs=await navigator.serviceWorker.getRegistrations();
+    for(const r of regs) await r.unregister();
+  }
+  const keys=await caches.keys();
+  for(const k of keys) await caches.delete(k);
+  document.body.innerHTML='<p>Cache cleared! Redirecting...</p>';
+  setTimeout(()=>location.href='./',1500);
+})();
+</script>
+</body></html>
