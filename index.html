@@ -888,19 +888,18 @@ function loadData() {
 }
 
 function dedupTransactions() {
-  // Remove duplicate transactions by matching date+text+amount+time
+  // Remove duplicate transactions by matching date+text+amount+time+category
   if (!data.transactions || data.transactions.length === 0) return;
   const seen = new Set();
   const clean = [];
   for (const t of data.transactions) {
-    const key = t.date + '|' + t.text + '|' + t.amount + '|' + (t.time || '');
+    const key = t.date + '|' + t.text + '|' + Number(t.amount) + '|' + (t.time || '') + '|' + (t.category || '');
     if (seen.has(key)) continue;
     seen.add(key);
     clean.push(t);
   }
   if (clean.length < data.transactions.length) {
     data.transactions = clean;
-    saveData();
   }
 }
 
@@ -2001,7 +2000,7 @@ function renderSettings() {
         <div class="setting-desc">Paste your deployed web app URL for cloud backup</div>
         <input class="form-input" id="settingSyncUrl" value="${esc(data.settings.syncUrl || '')}"
                placeholder="https://script.google.com/macros/s/.../exec"
-               onchange="data.settings.syncUrl=this.value.trim();saveData();toast('Sync URL saved')">
+               onchange="data.settings.syncUrl=this.value.trim();localStorage.setItem('rc_sync_url',this.value.trim());saveData();toast('Sync URL saved')">
       </div>
       <div class="setting-row" style="display:flex;gap:8px;padding-top:10px">
         <button class="btn btn-gold" onclick="doSync(true)">Push to Cloud</button>
@@ -2323,7 +2322,12 @@ function clearData() {
 
 // ===== CLOUD SYNC =====
 function getSyncUrl() {
-  return (data && data.settings && data.settings.syncUrl) || '';
+  // Check data first, then fallback to dedicated localStorage key that survives data wipes
+  var url = (data && data.settings && data.settings.syncUrl) || '';
+  if (!url) url = localStorage.getItem('rc_sync_url') || '';
+  // If found in data but not in dedicated key, persist it
+  if (url && !localStorage.getItem('rc_sync_url')) localStorage.setItem('rc_sync_url', url);
+  return url;
 }
 
 function fireGet(url) { var img = new Image(); img.src = url; }
@@ -3365,6 +3369,7 @@ seedJan2026();
 seedFeb2026();
 seedMar2026();
 loadCustomCategories();
+dedupTransactions();
 viewMonth = new Date();
 renderAll();
 
