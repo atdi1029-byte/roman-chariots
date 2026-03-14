@@ -2465,12 +2465,24 @@ function loadFromCloud(showToast) {
         return;
       }
     }
+    // Preserve local deletedIds so deleted transactions don't come back
+    var savedDeletedIds = (data && data.deletedIds) ? data.deletedIds.slice() : [];
     data = cloud;
+    // Merge back saved deletedIds
+    if (!data.deletedIds) data.deletedIds = [];
+    for (var i = 0; i < savedDeletedIds.length; i++) {
+      if (data.deletedIds.indexOf(savedDeletedIds[i]) === -1) data.deletedIds.push(savedDeletedIds[i]);
+    }
+    // Filter out any deleted transactions
+    if (data.deletedIds.length > 0) {
+      var delSet = new Set(data.deletedIds);
+      data.transactions = data.transactions.filter(function(t) { return !delSet.has(t.id); });
+    }
     CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
     loadCustomCategories();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     renderAll();
-    if (showToast) toast('Restored ' + cloud.transactions.length + ' transactions from cloud');
+    if (showToast) toast('Restored ' + data.transactions.length + ' transactions from cloud');
   });
 }
 
@@ -3358,7 +3370,17 @@ setTimeout(function() {
         // Safety: never auto-overwrite local data that has MORE transactions than cloud
         var localMore = !localEmpty && data.transactions.length > cloud.transactions.length;
         if (localEmpty || (!localMore && (!data.lastModified || (cloud.lastModified && cloud.lastModified > data.lastModified)))) {
+          // Preserve local deletedIds so deleted transactions don't resurrect
+          var savedDeletedIds = (data && data.deletedIds) ? data.deletedIds.slice() : [];
           data = cloud;
+          if (!data.deletedIds) data.deletedIds = [];
+          for (var i = 0; i < savedDeletedIds.length; i++) {
+            if (data.deletedIds.indexOf(savedDeletedIds[i]) === -1) data.deletedIds.push(savedDeletedIds[i]);
+          }
+          if (data.deletedIds.length > 0) {
+            var delSet = new Set(data.deletedIds);
+            data.transactions = data.transactions.filter(function(t) { return !delSet.has(t.id); });
+          }
           CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
           loadCustomCategories();
           applyRecurring();
@@ -3371,10 +3393,10 @@ setTimeout(function() {
   });
 }, 1500);
 
-// Auto-pull from cloud when app comes back to foreground
+// Auto-pull from cloud when app comes back to foreground — use doSync for proper merge
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible' && syncReady) {
-    loadFromCloud(false);
+    doSync(false);
   }
 });
 
