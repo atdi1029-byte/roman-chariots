@@ -888,14 +888,15 @@ function loadData() {
 }
 
 function dedupTransactions() {
-  // Remove duplicate transactions by matching date+text+amount+time+category
+  // Remove duplicate transactions and mark removed IDs as deleted so sync won't re-add them
   if (!data.transactions || data.transactions.length === 0) return;
-  const seen = new Set();
+  const seen = {};
   const clean = [];
+  if (!data.deletedIds) data.deletedIds = [];
   for (const t of data.transactions) {
-    const key = t.date + '|' + t.text + '|' + Number(t.amount) + '|' + (t.time || '') + '|' + (t.category || '');
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const key = t.date + '|' + String(t.text).trim() + '|' + Number(t.amount);
+    if (seen[key]) { if (t.id && data.deletedIds.indexOf(t.id) === -1) data.deletedIds.push(t.id); continue; }
+    seen[key] = true;
     clean.push(t);
   }
   if (clean.length < data.transactions.length) {
