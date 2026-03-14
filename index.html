@@ -887,7 +887,33 @@ function loadData() {
   return data;
 }
 
+function dedupRecurring() {
+  // One-time cleanup: remove duplicate auto-generated recurring transactions
+  if (!data.transactions || !data.recurring) return;
+  const now = new Date();
+  const mk = getMonthKey(now);
+  const seen = new Set();
+  const toRemove = [];
+  for (let i = 0; i < data.transactions.length; i++) {
+    const t = data.transactions[i];
+    if (t.recurringId && t.date.startsWith(mk)) {
+      if (seen.has(t.recurringId)) {
+        toRemove.push(i);
+      } else {
+        seen.add(t.recurringId);
+      }
+    }
+  }
+  if (toRemove.length > 0) {
+    for (let i = toRemove.length - 1; i >= 0; i--) {
+      data.transactions.splice(toRemove[i], 1);
+    }
+    saveData();
+  }
+}
+
 function applyRecurring() {
+  dedupRecurring();
   if (!data.recurring || data.recurring.length === 0) return;
   const now = new Date();
   const mk = getMonthKey(now);
@@ -3347,15 +3373,18 @@ seedJan2026();
 seedFeb2026();
 seedMar2026();
 loadCustomCategories();
-applyRecurring();
 viewMonth = new Date();
 renderAll();
 
 // Auto-load from cloud on startup — only applies if cloud data is newer (timestamp guard)
 // syncReady stays false until this completes, blocking any cloud saves during restore
+// applyRecurring() is deferred to here so it only runs ONCE after sync settles
 setTimeout(function() {
   const ep = getSyncUrl();
   if (!ep) {
+    applyRecurring();
+    saveData();
+    renderAll();
     syncReady = true;
     return;
   }
