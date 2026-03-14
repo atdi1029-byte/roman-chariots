@@ -2322,12 +2322,16 @@ function clearData() {
 }
 
 // ===== CLOUD SYNC =====
+var DEFAULT_SYNC_URL = 'https://script.google.com/macros/s/AKfycbwbYSLJOiEV6FwvdnNCfCDOcTyGISAJ-b3w3yRe6w-WPfBOeBeAGgPRSaSBR-YFqasT4w/exec';
 function getSyncUrl() {
-  // Check data first, then fallback to dedicated localStorage key that survives data wipes
   var url = (data && data.settings && data.settings.syncUrl) || '';
   if (!url) url = localStorage.getItem('rc_sync_url') || '';
-  // If found in data but not in dedicated key, persist it
-  if (url && !localStorage.getItem('rc_sync_url')) localStorage.setItem('rc_sync_url', url);
+  if (!url) url = DEFAULT_SYNC_URL;
+  // Persist so settings field shows the URL
+  if (url) {
+    if (!localStorage.getItem('rc_sync_url')) localStorage.setItem('rc_sync_url', url);
+    if (data && data.settings && !data.settings.syncUrl) { data.settings.syncUrl = url; }
+  }
   return url;
 }
 
