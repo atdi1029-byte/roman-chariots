@@ -2324,13 +2324,12 @@ function doSync(showFeedback) {
   const payload = JSON.stringify(data);
   const txCount = data.transactions.length;
   if (showFeedback) toast('Pushing ' + txCount + ' transactions...');
-  // Dual write: POST + fireGet backup (reliable on mobile)
+  // POST with text/plain — body reaches GAS before 302 redirect (proven pattern)
   fetch(ep, {
     method: 'POST',
     mode: 'no-cors',
-    redirect: 'follow',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    body: 'data=' + encodeURIComponent(payload)
+    headers: {'Content-Type': 'text/plain'},
+    body: JSON.stringify({ action: 'save', data: payload })
   }).then(function() {
     // Verify save actually worked by loading from cloud
     setTimeout(function() {
@@ -2356,11 +2355,6 @@ function doSync(showFeedback) {
     showSyncWarning(true);
     if (showFeedback) toast('Cloud save failed: ' + e.message);
   });
-  // fireGet backup — img-based GET bypasses mobile CORS redirect issues
-  var encoded = encodeURIComponent(payload);
-  if (encoded.length < 7000) {
-    fireGet(ep + '?action=save&data=' + encoded);
-  }
 }
 
 function showSyncWarning(show) {

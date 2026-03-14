@@ -25,22 +25,30 @@ function doGet(e) {
 function doPost(e) {
   try {
     var body = e.postData ? e.postData.contents : '';
-    // Handle form-encoded data (from fetch with application/x-www-form-urlencoded)
+    // Parse JSON body (text/plain POST)
+    var parsed = null;
+    try { parsed = JSON.parse(body); } catch(parseErr) {}
+
+    if (parsed && parsed.action === 'scan_receipt') {
+      handleScanReceipt(parsed.id, parsed.image);
+      return ContentService.createTextOutput(
+        JSON.stringify({ok: true})
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (parsed && parsed.action === 'save' && parsed.data) {
+      return handleSave(parsed.data);
+    }
+
+    // Legacy: form-encoded or raw body
     if (e.parameter && e.parameter.data) {
       return handleSave(e.parameter.data);
     }
-    // Check if this is a scan request
-    try {
-      var parsed = JSON.parse(body);
-      if (parsed && parsed.action === 'scan_receipt') {
-        handleScanReceipt(parsed.id, parsed.image);
-        return ContentService.createTextOutput(
-          JSON.stringify({ok: true})
-        ).setMimeType(ContentService.MimeType.JSON);
-      }
-    } catch(parseErr) {}
-    // Fall through to regular save
-    return handleSave(body);
+    if (body) return handleSave(body);
+
+    return ContentService.createTextOutput(
+      JSON.stringify({ok: false, error: 'No data received'})
+    ).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(
       JSON.stringify({ok: false, error: err.message})
