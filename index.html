@@ -2181,6 +2181,7 @@ function setType(t) {
 
 function selectCategory(cat) {
   modalCategory = cat;
+  if (cat === 'pay' || cat === 'tips') setType('income');
   document.querySelectorAll('.cat-chip').forEach(c => {
     const catKey = c.dataset.cat;
     const info = CATEGORIES[catKey];
@@ -2234,7 +2235,7 @@ function saveTransaction() {
     id: editingTx ? editingTx.id : 'tx_' + Date.now(),
     text: text,
     amount: amount,
-    type: modalType,
+    type: (modalCategory === 'pay' || modalCategory === 'tips') ? 'income' : modalType,
     category: modalCategory,
     date: date,
     time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
