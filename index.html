@@ -856,7 +856,7 @@ function loadData() {
     data = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!data || !data.transactions) throw 0;
   } catch(e) {
-    data = { transactions: [], recurring: [], patterns: {}, scanMemory: {}, settings: { name: '', syncUrl: '' }, lastModified: 0 };
+    data = { transactions: [], recurring: [], patterns: {}, scanMemory: {}, investments: [], settings: { name: '', syncUrl: '' }, lastModified: 0 };
   }
   // Migrate old categories
   let migrated = false;
@@ -2343,7 +2343,7 @@ function syncToCloud() {
   const ep = getSyncUrl();
   if (!ep) return;
   // Safety: refuse to overwrite cloud with empty data
-  if (!data.transactions || data.transactions.length === 0) return;
+  if ((!data.transactions || data.transactions.length === 0) && (!data.investments || data.investments.length === 0)) return;
   clearTimeout(_syncTimer);
   // Save immediately — Google Sheets is the priority
   doSync(false);
@@ -2397,6 +2397,17 @@ function doSync(showFeedback) {
         if (!data.scanMemory) data.scanMemory = {};
         for (const [k, v] of Object.entries(cloud.scanMemory)) {
           if (!data.scanMemory[k]) data.scanMemory[k] = v;
+        }
+      }
+      // Merge investments from cloud
+      if (cloud.investments && cloud.investments.length > 0) {
+        if (!data.investments) data.investments = [];
+        const localInvIds = new Set(data.investments.map(i => i.id));
+        for (const ci of cloud.investments) {
+          if (ci.id && !localInvIds.has(ci.id)) {
+            data.investments.push(ci);
+            merged++;
+          }
         }
       }
       if (merged > 0) {
@@ -2506,6 +2517,7 @@ function loadFromCloud(showToast) {
       var delSet = new Set(data.deletedIds);
       data.transactions = data.transactions.filter(function(t) { return !delSet.has(t.id); });
     }
+    if (!data.investments) data.investments = [];
     CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
     loadCustomCategories();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
