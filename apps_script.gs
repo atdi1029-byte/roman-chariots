@@ -15,6 +15,23 @@ function doGet(e) {
     var dataParam = e.parameter.data || '';
     return wrapResponse(handleSave(dataParam), callback);
   }
+  if (action === 'save_chunk') {
+    var i = parseInt(e.parameter.i || '0');
+    var cd = e.parameter.cd || '';
+    CacheService.getScriptCache().put('rc_chunk_' + i, cd, 120);
+    return wrapResponse({ok: true}, callback);
+  }
+  if (action === 'save_done') {
+    var n = parseInt(e.parameter.n || '0');
+    var cache = CacheService.getScriptCache();
+    var assembled = '';
+    for (var i = 0; i < n; i++) {
+      assembled += cache.get('rc_chunk_' + i) || '';
+      cache.remove('rc_chunk_' + i);
+    }
+    var result = handleSave(assembled);
+    return wrapResponse(result, callback);
+  }
   if (action === 'scan_result') {
     return wrapResponse(handleScanResult(e.parameter.id), callback);
   }
