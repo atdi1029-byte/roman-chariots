@@ -886,6 +886,8 @@ function loadData() {
   }
   if (!data.scanMemory) data.scanMemory = {};
   if (!data.deletedIds) data.deletedIds = [];
+  // Rebuild patterns from actual transactions (fixes stale/ghost patterns)
+  rebuildPatterns();
   if (migrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   return data;
 }
@@ -1067,6 +1069,14 @@ function updatePatterns(tx) {
   p.category = tx.category;
 }
 
+function rebuildPatterns() {
+  data.patterns = {};
+  const sorted = [...data.transactions]
+    .filter(t => t.type === 'expense')
+    .sort((a, b) => a.date.localeCompare(b.date));
+  for (const tx of sorted) updatePatterns(tx);
+}
+
 // ===== VIEW SWITCHING =====
 function switchView(name, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -1227,6 +1237,11 @@ function renderSmartInsights(mk) {
   // Pattern insights — spending habit observations
   for (const [key, p] of Object.entries(data.patterns)) {
     if (p.count < 3) continue;
+    // Skip stale patterns (no activity in 60+ days)
+    if (p.lastDate) {
+      const daysSince = (now - new Date(p.lastDate)) / 86400000;
+      if (daysSince > 60) continue;
+    }
     // Frequency pattern
     if (p.avgGapDays > 0 && p.avgGapDays < 35) {
       const gap = Math.round(p.avgGapDays);
@@ -1929,7 +1944,8 @@ function renderComparison() {
 }
 
 function renderPatternCards() {
-  const patterns = Object.entries(data.patterns).filter(([k, p]) => p.count >= 3 && p.category !== 'pay' && p.category !== 'tips');
+  const now60 = Date.now() - 60 * 86400000;
+  const patterns = Object.entries(data.patterns).filter(([k, p]) => p.count >= 3 && p.category !== 'pay' && p.category !== 'tips' && (!p.lastDate || new Date(p.lastDate) >= now60));
   if (patterns.length === 0) {
     document.getElementById('patternCards').innerHTML = '';
     return;
@@ -2251,12 +2267,11 @@ function saveTransaction() {
     // Update existing
     const idx = data.transactions.findIndex(t => t.id === editingTx.id);
     if (idx >= 0) data.transactions[idx] = tx;
+    rebuildPatterns();
   } else {
     data.transactions.push(tx);
+    updatePatterns(tx);
   }
-
-  // Update patterns
-  updatePatterns(tx);
 
   // Add to recurring if checked, or update existing recurring item
   if (isRecurring) {
@@ -2295,6 +2310,7 @@ function deleteTransaction() {
   if (!data.deletedIds) data.deletedIds = [];
   data.deletedIds.push(editingTx.id);
   data.transactions = data.transactions.filter(t => t.id !== editingTx.id);
+  rebuildPatterns();
   saveData();
   closeAddModal();
   toast('Transaction deleted');
