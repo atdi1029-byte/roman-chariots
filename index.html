@@ -3442,33 +3442,27 @@ seedFeb2026();
 seedMar2026();
 loadCustomCategories();
 dedupTransactions();
+// Apply recurring immediately with whatever local data we have
+applyRecurring();
+saveData();
 viewMonth = new Date();
 renderAll();
 
-// Auto-load from cloud on startup — only applies if cloud data is newer (timestamp guard)
-// syncReady stays false until this completes, blocking any cloud saves during restore
-// applyRecurring() is deferred to here so it only runs ONCE after sync settles
+// Cloud sync — merge from cloud, then apply recurring again in case cloud brought new recurring items
 setTimeout(function() {
   const ep = getSyncUrl();
   if (!ep) {
-    applyRecurring();
-    saveData();
-    renderAll();
     syncReady = true;
     return;
   }
-  // Inline cloud restore with syncReady gate — replaces loadFromCloud(false) call
   jsonpFetch(ep + '?action=load', function(err, resp) {
     if (!err && resp && resp.ok && resp.data) {
       let cloud;
       try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
       if (cloud && cloud.transactions) {
-        // Always restore from cloud if local is empty
         var localEmpty = !data.transactions || data.transactions.length === 0;
-        // Safety: never auto-overwrite local data that has MORE transactions than cloud
         var localMore = !localEmpty && data.transactions.length > cloud.transactions.length;
         if (localEmpty || (!localMore && (!data.lastModified || (cloud.lastModified && cloud.lastModified > data.lastModified)))) {
-          // Preserve local deletedIds so deleted transactions don't resurrect
           var savedDeletedIds = (data && data.deletedIds) ? data.deletedIds.slice() : [];
           data = cloud;
           if (!data.deletedIds) data.deletedIds = [];
@@ -3481,13 +3475,10 @@ setTimeout(function() {
           }
           CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
           loadCustomCategories();
-          applyRecurring();
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-          renderAll();
         }
       }
     }
-    // Always apply recurring for current month, even if cloud restore was skipped
+    // Always apply recurring after cloud settles — catches cloud recurring items too
     applyRecurring();
     saveData();
     renderAll();
