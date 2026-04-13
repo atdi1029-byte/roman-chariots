@@ -3487,6 +3487,10 @@ setTimeout(function() {
         }
       }
     }
+    // Always apply recurring for current month, even if cloud restore was skipped
+    applyRecurring();
+    saveData();
+    renderAll();
     syncReady = true;
   });
 }, 1500);

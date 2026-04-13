@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chariots-v63';
+const CACHE_NAME = 'chariots-v64';
 const ASSETS = [
   './',
   './index.html',
