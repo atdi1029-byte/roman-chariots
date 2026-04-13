@@ -54,14 +54,14 @@ function doPost(e) {
     }
 
     if (parsed && parsed.action === 'save' && parsed.data) {
-      return handleSave(parsed.data);
+      return ContentService.createTextOutput(JSON.stringify(handleSave(parsed.data))).setMimeType(ContentService.MimeType.JSON);
     }
 
     // Legacy: form-encoded or raw body
     if (e.parameter && e.parameter.data) {
-      return handleSave(e.parameter.data);
+      return ContentService.createTextOutput(JSON.stringify(handleSave(e.parameter.data))).setMimeType(ContentService.MimeType.JSON);
     }
-    if (body) return handleSave(body);
+    if (body) return ContentService.createTextOutput(JSON.stringify(handleSave(body))).setMimeType(ContentService.MimeType.JSON);
 
     return ContentService.createTextOutput(
       JSON.stringify({ok: false, error: 'No data received'})
@@ -87,9 +87,7 @@ function wrapResponse(obj, callback) {
 function handleSave(dataStr) {
   try {
     if (!dataStr) {
-      return ContentService.createTextOutput(
-        JSON.stringify({ok: false, error: 'No data'})
-      ).setMimeType(ContentService.MimeType.JSON);
+      return {ok: false, error: 'No data'};
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -101,13 +99,9 @@ function handleSave(dataStr) {
     sheet.getRange('A1').setValue(dataStr);
     sheet.getRange('B1').setValue(new Date().toISOString());
 
-    return ContentService.createTextOutput(
-      JSON.stringify({ok: true, saved: true, ts: new Date().toISOString()})
-    ).setMimeType(ContentService.MimeType.JSON);
+    return {ok: true, saved: true, ts: new Date().toISOString()};
   } catch (err) {
-    return ContentService.createTextOutput(
-      JSON.stringify({ok: false, error: err.message})
-    ).setMimeType(ContentService.MimeType.JSON);
+    return {ok: false, error: err.message};
   }
 }
 
