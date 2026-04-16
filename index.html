@@ -2347,7 +2347,6 @@ function getSyncUrl() {
   var url = (data && data.settings && data.settings.syncUrl) || '';
   if (!url) url = localStorage.getItem('rc_sync_url') || '';
   if (!url) url = DEFAULT_SYNC_URL;
-  // Persist so settings field shows the URL
   if (url) {
     if (!localStorage.getItem('rc_sync_url')) localStorage.setItem('rc_sync_url', url);
     if (data && data.settings && !data.settings.syncUrl) { data.settings.syncUrl = url; }
@@ -2365,9 +2364,8 @@ function syncToCloud() {
   clearTimeout(_syncDebounce);
   _syncDebounce = setTimeout(function() {
     _syncDebounce = null;
-    mergeFromCloud(false, function() {
-      _doCloudSave(ep, false);
-    });
+    // Save directly — don't block on merge
+    _doCloudSave(ep, false);
   }, 1500);
 }
 
@@ -2376,8 +2374,13 @@ function mergeFromCloud(showFeedback, onComplete) {
   if (!ep) { if (onComplete) onComplete(); return; }
   if (showFeedback) toast('Syncing...');
   jsonpFetch(ep + '?action=load', function(err, resp) {
+    if (err) {
+      console.warn('[RC Sync] merge load failed:', err);
+      if (onComplete) onComplete();
+      return;
+    }
     var cloud = null;
-    if (!err && resp && resp.ok && resp.data) {
+    if (resp && resp.ok && resp.data) {
       try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
     }
     if (cloud && cloud.transactions && cloud.transactions.length > 0) {
@@ -2416,7 +2419,7 @@ function mergeFromCloud(showFeedback, onComplete) {
       }
       if (cloud.investments && cloud.investments.length > 0) {
         if (!data.investments) data.investments = [];
-        var localInvIds = new Set(data.investments.map(function(i){return i.id}));
+        var localInvIds = new Set(data.investments.map(function(inv){return inv.id}));
         for (var m = 0; m < cloud.investments.length; m++) {
           var ci = cloud.investments[m];
           if (ci.id && !localInvIds.has(ci.id)) {
@@ -2426,6 +2429,7 @@ function mergeFromCloud(showFeedback, onComplete) {
         }
       }
       if (merged > 0) {
+        console.log('[RC Sync] merged ' + merged + ' items from cloud');
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         renderAll();
         if (showFeedback) toast('Merged ' + merged + ' items from cloud');
@@ -2435,25 +2439,80 @@ function mergeFromCloud(showFeedback, onComplete) {
   });
 }
 
+// Primary save: fetch POST with no-cors (single request, no chunking)
+// Apps Script processes the POST before its redirect, so data IS saved
+// even though we get an opaque response
 function _doCloudSave(ep, showFeedback) {
   if (_saveInFlight) { _savePending = true; return; }
   if (!ep) ep = getSyncUrl();
   if (!ep) return;
-  if ((!data.transactions || data.transactions.length === 0) && (!data.investments || data.investments.length === 0)) return;
+  if ((!data.transactions || data.transactions.length === 0) &&
+      (!data.investments || data.investments.length === 0)) return;
   _saveInFlight = true;
   var payload = JSON.stringify(data);
-  var CHUNK = 1800;
+  if (showFeedback) toast('Pushing ' + data.transactions.length + ' transactions...');
+  console.log('[RC Sync] saving ' + payload.length + ' bytes (' + data.transactions.length + ' tx)...');
+
+  fetch(ep, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'save', data: payload })
+  }).then(function() {
+    // no-cors gives opaque response — verify save worked via JSONP load
+    console.log('[RC Sync] POST sent, verifying...');
+    setTimeout(function() {
+      jsonpFetch(ep + '?action=load', function(err, resp) {
+        _saveInFlight = false;
+        if (!err && resp && resp.ok && resp.data) {
+          var cloud;
+          try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
+          if (cloud && cloud.transactions) {
+            console.log('[RC Sync] verified: cloud has ' + cloud.transactions.length + ' tx');
+            showSyncWarning(false);
+            if (showFeedback) toast('Synced ' + data.transactions.length + ' transactions');
+          } else {
+            console.warn('[RC Sync] verify got data but no transactions, trying chunked fallback');
+            _saveInFlight = true;
+            _doChunkedSave(ep, showFeedback);
+            return;
+          }
+        } else {
+          // Can't verify — try chunked fallback
+          console.warn('[RC Sync] verify failed (' + (err || 'no data') + '), trying chunked fallback');
+          _saveInFlight = true;
+          _doChunkedSave(ep, showFeedback);
+          return;
+        }
+        if (_savePending) { _savePending = false; setTimeout(function() { _doCloudSave(ep, false); }, 1000); }
+      });
+    }, 1500); // give Apps Script time to process
+  }).catch(function(err) {
+    console.warn('[RC Sync] POST failed:', err, '— trying chunked fallback');
+    _doChunkedSave(ep, showFeedback);
+  });
+}
+
+// Fallback: chunked JSONP save (500-char chunks to stay under URL limits)
+function _doChunkedSave(ep, showFeedback) {
+  if (!ep) ep = getSyncUrl();
+  if (!ep) { _saveInFlight = false; return; }
+  _saveInFlight = true;
+  var payload = JSON.stringify(data);
+  var CHUNK = 500; // small chunks — URL-encoded JSON can 2-3x in length
   var chunks = [];
   for (var i = 0; i < payload.length; i += CHUNK) chunks.push(payload.substring(i, i + CHUNK));
   var chunkIdx = 0;
   var retries = 0;
-  if (showFeedback) toast('Pushing ' + data.transactions.length + ' transactions...');
+  console.log('[RC Sync] chunked save: ' + chunks.length + ' chunks of ' + CHUNK + ' chars');
+  if (showFeedback) toast('Pushing ' + chunks.length + ' chunks...');
   function sendNext() {
     if (chunkIdx >= chunks.length) {
       jsonpFetch(ep + '?action=save_done&n=' + chunks.length + '&len=' + payload.length, function(err, resp) {
         if (!err && resp && resp.ok && resp.saved) {
           _saveInFlight = false;
           showSyncWarning(false);
+          console.log('[RC Sync] chunked save complete');
           if (showFeedback) toast('Synced ' + data.transactions.length + ' transactions');
           if (_savePending) { _savePending = false; setTimeout(function() { _doCloudSave(ep, false); }, 1000); }
         } else if (retries < 2) {
@@ -2462,6 +2521,7 @@ function _doCloudSave(ep, showFeedback) {
         } else {
           _saveInFlight = false;
           showSyncWarning(true);
+          console.error('[RC Sync] chunked save_done failed after retries');
           if (showFeedback) toast('Cloud save failed');
           if (_savePending) { _savePending = false; setTimeout(function() { _doCloudSave(ep, false); }, 2000); }
         }
@@ -2475,6 +2535,8 @@ function _doCloudSave(ep, showFeedback) {
       else {
         _saveInFlight = false;
         showSyncWarning(true);
+        console.error('[RC Sync] chunk ' + chunkIdx + ' failed after retries');
+        if (showFeedback) toast('Cloud save failed at chunk ' + chunkIdx);
         if (_savePending) { _savePending = false; setTimeout(function() { _doCloudSave(ep, false); }, 2000); }
       }
     });
@@ -2486,21 +2548,18 @@ function beaconSave() {
   var ep = getSyncUrl();
   if (!ep || !syncReady || _saveInFlight) return;
   if (!data.transactions || data.transactions.length === 0) return;
-  var payload = JSON.stringify(data);
-  var CHUNK = 1800;
-  var chunks = [];
-  for (var i = 0; i < payload.length; i += CHUNK) chunks.push(payload.substring(i, i + CHUNK));
-  for (var c = 0; c < chunks.length; c++) {
-    fireGet(ep + '?action=save_chunk&i=' + c + '&cd=' + encodeURIComponent(chunks[c]));
+  // Use sendBeacon for reliable page-close saves
+  var payload = JSON.stringify({ action: 'save', data: JSON.stringify(data) });
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(ep, payload);
+    console.log('[RC Sync] beacon save sent');
   }
-  setTimeout(function() {
-    fireGet(ep + '?action=save_done&n=' + chunks.length + '&len=' + payload.length);
-  }, 300);
 }
 
 function doSync(showFeedback) {
   var ep = getSyncUrl();
   if (!ep) { if (showFeedback) toast('No sync URL set'); return; }
+  // Merge first, then save
   mergeFromCloud(showFeedback, function() {
     _doCloudSave(ep, showFeedback);
   });
@@ -2519,28 +2578,33 @@ function showSyncWarning(show) {
 }
 
 function loadFromCloud(showToast) {
-  const ep = getSyncUrl();
+  var ep = getSyncUrl();
   if (!ep) { if (showToast) toast('No sync URL set'); return; }
   if (!showToast && _syncTimer) return;
   if (showToast) toast('Loading from cloud...');
-  const loadStartedAt = _lastLocalSave;
+  var loadStartedAt = _lastLocalSave;
+  console.log('[RC Sync] loading from cloud...');
 
   jsonpFetch(ep + '?action=load', function(err, resp) {
     if (err) {
+      console.warn('[RC Sync] cloud load failed:', err);
       if (showToast) toast('Cloud fetch failed: ' + err);
       return;
     }
     if (!showToast && _lastLocalSave > loadStartedAt) return;
     if (!resp || !resp.ok) {
+      console.warn('[RC Sync] cloud error:', resp);
       if (showToast) toast('Cloud error: ' + ((resp && resp.error) || 'unknown'));
       return;
     }
     if (!resp.data) {
+      console.log('[RC Sync] cloud is empty');
       if (showToast) toast('Cloud is empty');
       return;
     }
-    let cloud;
+    var cloud;
     try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {
+      console.error('[RC Sync] cloud data parse error:', e);
       if (showToast) toast('Cloud data corrupted');
       return;
     }
@@ -2548,25 +2612,21 @@ function loadFromCloud(showToast) {
       if (showToast) toast('Cloud data invalid');
       return;
     }
-    // Always restore from cloud if local is empty
+    console.log('[RC Sync] cloud has ' + cloud.transactions.length + ' tx, local has ' + (data.transactions || []).length);
     var localEmpty = !data.transactions || data.transactions.length === 0;
     if (!showToast && !localEmpty) {
       if (data.lastModified && (!cloud.lastModified || data.lastModified >= cloud.lastModified)) return;
-      // Safety: never auto-overwrite local data that has MORE transactions than cloud
       if (data.transactions.length > cloud.transactions.length) {
-        console.warn('Cloud has fewer transactions (' + cloud.transactions.length + ') than local (' + data.transactions.length + ') — skipping auto-restore');
+        console.warn('[RC Sync] cloud has fewer tx — skipping auto-restore');
         return;
       }
     }
-    // Preserve local deletedIds so deleted transactions don't come back
     var savedDeletedIds = (data && data.deletedIds) ? data.deletedIds.slice() : [];
     data = cloud;
-    // Merge back saved deletedIds
     if (!data.deletedIds) data.deletedIds = [];
     for (var i = 0; i < savedDeletedIds.length; i++) {
       if (data.deletedIds.indexOf(savedDeletedIds[i]) === -1) data.deletedIds.push(savedDeletedIds[i]);
     }
-    // Filter out any deleted transactions
     if (data.deletedIds.length > 0) {
       var delSet = new Set(data.deletedIds);
       data.transactions = data.transactions.filter(function(t) { return !delSet.has(t.id); });
@@ -2576,6 +2636,7 @@ function loadFromCloud(showToast) {
     loadCustomCategories();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     renderAll();
+    console.log('[RC Sync] restored ' + data.transactions.length + ' tx from cloud');
     if (showToast) toast('Restored ' + data.transactions.length + ' transactions from cloud');
   });
 }
@@ -3480,9 +3541,11 @@ setTimeout(function() {
     }
     // Always apply recurring after cloud settles — catches cloud recurring items too
     applyRecurring();
+    // syncReady MUST be true before saveData so the save actually pushes to cloud
+    syncReady = true;
     saveData();
     renderAll();
-    syncReady = true;
+    console.log('[RC Sync] init complete, syncReady=true');
   });
 }, 1500);
 
