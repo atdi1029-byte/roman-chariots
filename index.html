@@ -748,7 +748,9 @@ a{text-decoration:none;color:inherit}
 
 <script>
 // ===== CONSTANTS =====
-const STORAGE_KEY = 'roman_chariots_v1';
+const STORAGE_KEY = 'roman_chariots_v1'; // legacy — migrated on first load
+const SK_CORE = 'rc_core_v1';
+const SK_TRANSACTIONS = 'rc_tx_v1';
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -854,10 +856,38 @@ var _savePending = false;
 var _syncDebounce = null;
 
 // ===== DATA =====
+function _splitSave(d) {
+  var core = {
+    recurring: d.recurring || [],
+    patterns: d.patterns || {},
+    scanMemory: d.scanMemory || {},
+    investments: d.investments || [],
+    deletedIds: d.deletedIds || [],
+    settings: d.settings || {},
+    lastModified: d.lastModified,
+    lastSyncedAt: d.lastSyncedAt
+  };
+  var coreOk = safeLocalSave(SK_CORE, JSON.stringify(core));
+  safeLocalSave(SK_TRANSACTIONS, JSON.stringify(d.transactions || []));
+  return coreOk;
+}
+
 function loadData() {
   try {
-    data = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!data || !data.transactions) throw 0;
+    var legacy = localStorage.getItem(STORAGE_KEY);
+    if (legacy) {
+      data = JSON.parse(legacy);
+      if (!data || !data.transactions) throw 0;
+      _splitSave(data);
+      localStorage.removeItem(STORAGE_KEY);
+    } else {
+      var core = JSON.parse(localStorage.getItem(SK_CORE) || 'null');
+      if (!core) throw 0;
+      data = Object.assign({}, core, {
+        transactions: JSON.parse(localStorage.getItem(SK_TRANSACTIONS) || '[]')
+      });
+      if (!data.transactions) throw 0;
+    }
   } catch(e) {
     data = { transactions: [], recurring: [], patterns: {}, scanMemory: {}, investments: [], settings: { name: '', syncUrl: '' }, lastModified: 0 };
   }
@@ -889,7 +919,7 @@ function loadData() {
   pruneDeletedIds();
   // Rebuild patterns from actual transactions (fixes stale/ghost patterns)
   rebuildPatterns();
-  if (migrated) safeLocalSave(STORAGE_KEY, JSON.stringify(data));
+  if (migrated) _splitSave(data);
   return data;
 }
 
@@ -956,7 +986,7 @@ function safeLocalSave(key, payload) {
 function saveData() {
   data.lastModified = Date.now();
   _lastLocalSave = Date.now();
-  var ok = safeLocalSave(STORAGE_KEY, JSON.stringify(data));
+  var ok = _splitSave(data);
   if (!ok) return; // never sync to cloud after local save failure
   syncToCloud();
 }
@@ -2366,7 +2396,7 @@ function clearData() {
   const savedSyncUrl = (data && data.settings && data.settings.syncUrl) || '';
   data = { transactions: [], recurring: [], patterns: {}, settings: { name: '', syncUrl: savedSyncUrl }, lastModified: 0 };
   // Save locally only — do NOT sync empty data to cloud
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  _splitSave(data);
   renderAll();
   toast('Local data cleared (cloud untouched)');
 }
@@ -2481,7 +2511,7 @@ function mergeFromCloud(showFeedback, onComplete) {
       var merged = _mergeCloudData(cloud);
       if (merged > 0) {
         console.log('[RC Sync] merged ' + merged + ' items from cloud');
-        safeLocalSave(STORAGE_KEY, JSON.stringify(data));
+        _splitSave(data);
         renderAll();
         if (showFeedback) toast('Merged ' + merged + ' items from cloud');
       }
@@ -2520,7 +2550,7 @@ function _doCloudSave(ep, showFeedback) {
           try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
           if (cloud && cloud.transactions) {
             console.log('[RC Sync] verified: cloud has ' + cloud.transactions.length + ' tx');
-            if (resp && resp.ts) { data.lastSyncedAt = resp.ts; safeLocalSave(STORAGE_KEY, JSON.stringify(data)); }
+            if (resp && resp.ts) { data.lastSyncedAt = resp.ts; _splitSave(data); }
             showSyncWarning(false);
             if (showFeedback) toast('Synced ' + data.transactions.length + ' transactions');
           } else {
@@ -2687,7 +2717,7 @@ function loadFromCloud(showToast) {
     if (!data.investments) data.investments = [];
     CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
     loadCustomCategories();
-    safeLocalSave(STORAGE_KEY, JSON.stringify(data));
+    _splitSave(data);
     renderAll();
     console.log('[RC Sync] restored ' + data.transactions.length + ' tx from cloud');
     if (showToast) toast('Restored ' + data.transactions.length + ' transactions from cloud');
