@@ -886,9 +886,10 @@ function loadData() {
   }
   if (!data.scanMemory) data.scanMemory = {};
   if (!data.deletedIds) data.deletedIds = [];
+  pruneDeletedIds();
   // Rebuild patterns from actual transactions (fixes stale/ghost patterns)
   rebuildPatterns();
-  if (migrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  if (migrated) safeLocalSave(STORAGE_KEY, JSON.stringify(data));
   return data;
 }
 
@@ -900,7 +901,7 @@ function dedupTransactions() {
   if (!data.deletedIds) data.deletedIds = [];
   for (const t of data.transactions) {
     const key = t.date + '|' + String(t.text).trim() + '|' + Number(t.amount);
-    if (seen[key]) { if (t.id && data.deletedIds.indexOf(t.id) === -1) data.deletedIds.push(t.id); continue; }
+    if (seen[key]) { if (t.id) _pushDeleted(t.id); continue; }
     seen[key] = true;
     clean.push(t);
   }
@@ -933,18 +934,45 @@ function applyRecurring() {
       dayOfWeek: new Date(dateStr + 'T12:00:00').getDay(),
       recurring: true,
       recurringId: r.id,
-      notes: 'Auto-generated recurring'
+      notes: 'Auto-generated recurring',
+      updatedAt: Date.now()
     });
     added = true;
   }
   if (added) saveData();
 }
 
+function safeLocalSave(key, payload) {
+  try {
+    localStorage.setItem(key, payload);
+    return true;
+  } catch (err) {
+    console.error('[RC] localStorage QUOTA ERROR:', err);
+    toast('Storage full — data not saved locally');
+    return false;
+  }
+}
+
 function saveData() {
   data.lastModified = Date.now();
   _lastLocalSave = Date.now();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  var ok = safeLocalSave(STORAGE_KEY, JSON.stringify(data));
+  if (!ok) return; // never sync to cloud after local save failure
   syncToCloud();
+}
+
+// ===== DELETED IDS HELPERS =====
+// deletedIds stores {id, ts} objects. Legacy string entries are tolerated.
+function _delId(d) { return typeof d === 'string' ? d : d.id; }
+function _hasDeleted(id) { return (data.deletedIds || []).some(function(d) { return _delId(d) === id; }); }
+function _pushDeleted(id) { if (!_hasDeleted(id)) data.deletedIds.push({id: id, ts: Date.now()}); }
+function pruneDeletedIds() {
+  if (!data.deletedIds) return;
+  var cutoff = Date.now() - 90 * 86400000;
+  // Normalize strings to objects, then prune old entries
+  data.deletedIds = data.deletedIds
+    .map(function(d) { return typeof d === 'string' ? {id: d, ts: Date.now()} : d; })
+    .filter(function(d) { return (d.ts || 0) > cutoff; });
 }
 
 // ===== HELPERS =====
@@ -2027,6 +2055,7 @@ function renderSettings() {
         <button class="btn btn-outline" onclick="loadFromCloud(true)">Restore</button>
         <button class="btn btn-outline" onclick="peekCloud()">Test Cloud</button>
       </div>
+      ${data.lastSyncedAt ? `<div class="setting-row"><div class="setting-desc" style="color:var(--teal)">Last synced: ${new Date(data.lastSyncedAt).toLocaleString()}</div></div>` : ''}
     </div>
     <div class="setting-group">
       <div class="setting-title">Data</div>
@@ -2260,7 +2289,8 @@ function saveTransaction() {
     time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
     dayOfWeek: d.getDay(),
     recurring: isRecurring,
-    notes: notes || ''
+    notes: notes || '',
+    updatedAt: Date.now()
   };
 
   if (editingTx) {
@@ -2308,7 +2338,7 @@ function deleteTransaction() {
   if (!editingTx) return;
   if (!confirm('Delete this transaction?')) return;
   if (!data.deletedIds) data.deletedIds = [];
-  data.deletedIds.push(editingTx.id);
+  _pushDeleted(editingTx.id);
   data.transactions = data.transactions.filter(t => t.id !== editingTx.id);
   rebuildPatterns();
   saveData();
@@ -2369,6 +2399,70 @@ function syncToCloud() {
   }, 1500);
 }
 
+// Core merge: apply cloud data into local using per-transaction updatedAt comparison.
+// Handles new transactions (add) and edited ones (take newer by updatedAt).
+// Returns count of changes applied.
+function _mergeCloudData(cloud) {
+  if (!cloud || !cloud.transactions) return 0;
+  var localMap = {};
+  data.transactions.forEach(function(t) { localMap[t.id] = t; });
+  var toStr = function(d) { return typeof d === 'string' ? d : d.id; };
+  var localDeleted = new Set((data.deletedIds || []).map(toStr));
+  var cloudDeleted = new Set((cloud.deletedIds || []).map(toStr));
+  if (!data.deletedIds) data.deletedIds = [];
+  // Absorb any cloud deletions we don't have locally (preserve original entry to keep ts)
+  for (var ci2 = 0; ci2 < (cloud.deletedIds || []).length; ci2++) {
+    var cde = cloud.deletedIds[ci2];
+    if (!localDeleted.has(toStr(cde))) data.deletedIds.push(cde);
+  }
+  var allDeleted = new Set((data.deletedIds).map(toStr));
+  // Remove locally any tx the cloud says are deleted
+  data.transactions = data.transactions.filter(function(t) { return !cloudDeleted.has(t.id); });
+  var merged = 0;
+  for (var i = 0; i < cloud.transactions.length; i++) {
+    var ct = cloud.transactions[i];
+    if (!ct.id || allDeleted.has(ct.id)) continue;
+    var local = localMap[ct.id];
+    if (!local) {
+      // New transaction from cloud
+      data.transactions.push(ct);
+      merged++;
+    } else if ((ct.updatedAt || 0) > (local.updatedAt || 0)) {
+      // Cloud version edited more recently — take it
+      var idx = data.transactions.findIndex(function(t) { return t.id === ct.id; });
+      if (idx !== -1) { data.transactions[idx] = ct; merged++; }
+    }
+  }
+  // Merge recurring (add-only — recurring edits are rare)
+  var localRecIds = new Set((data.recurring || []).map(function(r) { return r.id; }));
+  if (cloud.recurring) {
+    for (var j = 0; j < cloud.recurring.length; j++) {
+      var cr = cloud.recurring[j];
+      if (cr.id && !localRecIds.has(cr.id)) {
+        if (!data.recurring) data.recurring = [];
+        data.recurring.push(cr);
+      }
+    }
+  }
+  // Merge scanMemory
+  if (cloud.scanMemory) {
+    if (!data.scanMemory) data.scanMemory = {};
+    for (var k in cloud.scanMemory) {
+      if (!data.scanMemory[k]) data.scanMemory[k] = cloud.scanMemory[k];
+    }
+  }
+  // Merge investments
+  if (cloud.investments && cloud.investments.length > 0) {
+    if (!data.investments) data.investments = [];
+    var localInvIds = new Set(data.investments.map(function(inv) { return inv.id; }));
+    for (var m = 0; m < cloud.investments.length; m++) {
+      var ci = cloud.investments[m];
+      if (ci.id && !localInvIds.has(ci.id)) { data.investments.push(ci); merged++; }
+    }
+  }
+  return merged;
+}
+
 function mergeFromCloud(showFeedback, onComplete) {
   var ep = getSyncUrl();
   if (!ep) { if (onComplete) onComplete(); return; }
@@ -2384,53 +2478,10 @@ function mergeFromCloud(showFeedback, onComplete) {
       try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
     }
     if (cloud && cloud.transactions && cloud.transactions.length > 0) {
-      var localIds = new Set(data.transactions.map(function(t){return t.id}));
-      var localDeleted = new Set(data.deletedIds || []);
-      var cloudDeleted = new Set(cloud.deletedIds || []);
-      if (!data.deletedIds) data.deletedIds = [];
-      for (var did of cloudDeleted) {
-        if (!localDeleted.has(did)) data.deletedIds.push(did);
-      }
-      var allDeleted = new Set(data.deletedIds);
-      data.transactions = data.transactions.filter(function(t){return !cloudDeleted.has(t.id)});
-      var merged = 0;
-      for (var i = 0; i < cloud.transactions.length; i++) {
-        var ct = cloud.transactions[i];
-        if (ct.id && !localIds.has(ct.id) && !allDeleted.has(ct.id)) {
-          data.transactions.push(ct);
-          merged++;
-        }
-      }
-      if (cloud.recurring) {
-        var localRecIds = new Set((data.recurring || []).map(function(r){return r.id}));
-        for (var j = 0; j < cloud.recurring.length; j++) {
-          var cr = cloud.recurring[j];
-          if (cr.id && !localRecIds.has(cr.id)) {
-            if (!data.recurring) data.recurring = [];
-            data.recurring.push(cr);
-          }
-        }
-      }
-      if (cloud.scanMemory) {
-        if (!data.scanMemory) data.scanMemory = {};
-        for (var k in cloud.scanMemory) {
-          if (!data.scanMemory[k]) data.scanMemory[k] = cloud.scanMemory[k];
-        }
-      }
-      if (cloud.investments && cloud.investments.length > 0) {
-        if (!data.investments) data.investments = [];
-        var localInvIds = new Set(data.investments.map(function(inv){return inv.id}));
-        for (var m = 0; m < cloud.investments.length; m++) {
-          var ci = cloud.investments[m];
-          if (ci.id && !localInvIds.has(ci.id)) {
-            data.investments.push(ci);
-            merged++;
-          }
-        }
-      }
+      var merged = _mergeCloudData(cloud);
       if (merged > 0) {
         console.log('[RC Sync] merged ' + merged + ' items from cloud');
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        safeLocalSave(STORAGE_KEY, JSON.stringify(data));
         renderAll();
         if (showFeedback) toast('Merged ' + merged + ' items from cloud');
       }
@@ -2469,6 +2520,7 @@ function _doCloudSave(ep, showFeedback) {
           try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
           if (cloud && cloud.transactions) {
             console.log('[RC Sync] verified: cloud has ' + cloud.transactions.length + ' tx');
+            if (resp && resp.ts) { data.lastSyncedAt = resp.ts; safeLocalSave(STORAGE_KEY, JSON.stringify(data)); }
             showSyncWarning(false);
             if (showFeedback) toast('Synced ' + data.transactions.length + ' transactions');
           } else {
@@ -2624,17 +2676,18 @@ function loadFromCloud(showToast) {
     var savedDeletedIds = (data && data.deletedIds) ? data.deletedIds.slice() : [];
     data = cloud;
     if (!data.deletedIds) data.deletedIds = [];
+    var cloudDelIdSet = new Set(data.deletedIds.map(_delId));
     for (var i = 0; i < savedDeletedIds.length; i++) {
-      if (data.deletedIds.indexOf(savedDeletedIds[i]) === -1) data.deletedIds.push(savedDeletedIds[i]);
+      if (!cloudDelIdSet.has(_delId(savedDeletedIds[i]))) data.deletedIds.push(savedDeletedIds[i]);
     }
     if (data.deletedIds.length > 0) {
-      var delSet = new Set(data.deletedIds);
+      var delSet = new Set(data.deletedIds.map(_delId));
       data.transactions = data.transactions.filter(function(t) { return !delSet.has(t.id); });
     }
     if (!data.investments) data.investments = [];
     CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
     loadCustomCategories();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    safeLocalSave(STORAGE_KEY, JSON.stringify(data));
     renderAll();
     console.log('[RC Sync] restored ' + data.transactions.length + ' tx from cloud');
     if (showToast) toast('Restored ' + data.transactions.length + ' transactions from cloud');
@@ -2718,7 +2771,7 @@ document.addEventListener('touchend', e => {
     const id = swipingEl.getAttribute('onclick').match(/'([^']+)'/)?.[1];
     if (id && confirm('Delete this transaction?')) {
       if (!data.deletedIds) data.deletedIds = [];
-      data.deletedIds.push(id);
+      _pushDeleted(id);
       data.transactions = data.transactions.filter(t => t.id !== id);
       saveData();
       renderAll();
@@ -3522,21 +3575,27 @@ setTimeout(function() {
       try { cloud = typeof resp.data === 'string' ? JSON.parse(resp.data) : resp.data; } catch(e) {}
       if (cloud && cloud.transactions) {
         var localEmpty = !data.transactions || data.transactions.length === 0;
-        var localMore = !localEmpty && data.transactions.length > cloud.transactions.length;
-        if (localEmpty || (!localMore && (!data.lastModified || (cloud.lastModified && cloud.lastModified > data.lastModified)))) {
+        if (localEmpty) {
+          // No local data — take cloud wholesale
           var savedDeletedIds = (data && data.deletedIds) ? data.deletedIds.slice() : [];
+          var savedSyncUrl = (data && data.settings && data.settings.syncUrl) || '';
           data = cloud;
           if (!data.deletedIds) data.deletedIds = [];
+          var cloudDelSet = new Set(data.deletedIds.map(function(d) { return typeof d === 'string' ? d : d.id; }));
           for (var i = 0; i < savedDeletedIds.length; i++) {
-            if (data.deletedIds.indexOf(savedDeletedIds[i]) === -1) data.deletedIds.push(savedDeletedIds[i]);
+            var did = typeof savedDeletedIds[i] === 'string' ? savedDeletedIds[i] : savedDeletedIds[i].id;
+            if (!cloudDelSet.has(did)) data.deletedIds.push(savedDeletedIds[i]);
           }
-          if (data.deletedIds.length > 0) {
-            var delSet = new Set(data.deletedIds);
-            data.transactions = data.transactions.filter(function(t) { return !delSet.has(t.id); });
-          }
+          if (!data.investments) data.investments = [];
+          if (!data.settings) data.settings = {};
+          if (!data.settings.syncUrl && savedSyncUrl) data.settings.syncUrl = savedSyncUrl;
           CATEGORIES = Object.assign({}, DEFAULT_CATEGORIES);
           loadCustomCategories();
+        } else {
+          // Has local data — per-transaction merge (takes newer by updatedAt)
+          _mergeCloudData(cloud);
         }
+        if (resp && resp.ts) data.lastSyncedAt = resp.ts;
       }
     }
     // Always apply recurring after cloud settles — catches cloud recurring items too
@@ -3560,6 +3619,10 @@ document.addEventListener('visibilitychange', function() {
       _doCloudSave(ep, false);
     }
   }
+});
+// Reconnect after going offline — flush pending writes and pull from cloud
+window.addEventListener('online', function() {
+  if (syncReady) setTimeout(function() { doSync(false); }, 1000);
 });
 // Last-resort save on app close
 document.addEventListener('pagehide', function() {
