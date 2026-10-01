@@ -58,7 +58,9 @@ function doPost(e) {
     }
 
     if (parsed && parsed.action === 'save' && parsed.data) {
-      var ns = parsed.ns === 'test' ? 'test' : '';
+      // ns can come in the body or on the URL (test builds post to .../exec?ns=test)
+      var nsIn = parsed.ns || (e.parameter && e.parameter.ns);
+      var ns = nsIn === 'test' ? 'test' : '';
       return jsonOut(handleSave(parsed.data, {ns: ns, force: parsed.force === true || parsed.force === '1'}));
     }
 
